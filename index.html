@@ -598,6 +598,12 @@ function showTab(tab,el){
   document.getElementById('ca').scrollTop=0;
 }
 
+function getFromDate(days){
+  const d=new Date();
+  d.setDate(d.getDate()-days);
+  return d.toISOString().slice(0,10);
+}
+
 async function loadRange(range,btn){
   if(btn){document.querySelectorAll('.rb').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
   const st=document.getElementById('fst');
@@ -607,7 +613,7 @@ async function loadRange(range,btn){
     // Map range to FMP timeseries days
     const days={'1mo':30,'3mo':90,'6mo':180,'1y':365,'2y':730};
     const n=days[range]||90;
-    const r=await fetch(`${FMP_BASE}/historical-price-full/JEPI?timeseries=${n}&apikey=${FMP_KEY}`);
+    const r=await fetch(`${FMP_BASE}/historical-price-eod/full?symbol=JEPI&from=${getFromDate(n)}&apikey=${FMP_KEY}`);
     const data=await r.json();
     const hist=(data.historical||[]).reverse(); // FMP returns newest first
     if(!hist.length) throw new Error('Sin datos históricos');
@@ -631,9 +637,9 @@ async function loadRange(range,btn){
     // Dividend markers from FMP data (dividends endpoint)
     let divDates=[];
     try{
-      const rd=await fetch(`${FMP_BASE}/historical-price-full/stock_dividend/JEPI?apikey=${FMP_KEY}`);
+      const rd=await fetch(`${FMP_BASE}/dividends?symbol=JEPI&apikey=${FMP_KEY}`);
       const dd=await rd.json();
-      divDates=(dd.historical||[]).map(d=>d.date).slice(0,n/30+1);
+      divDates=((dd.dividends||dd.historical||dd||[]).map(d=>d.date||d.paymentDate)).slice(0,12);
     }catch(e){}
 
     const pm2=posiciones.length?pmed(px):px, alM=pm2*(1-P.alarmaPct);
@@ -691,7 +697,7 @@ async function loadRange(range,btn){
 
 // ── FMP API CONFIG ────────────────────────────────────────────────────────────
 const FMP_KEY = 'jLSP4MscQv3zeTSbM9gcDkK9l85MVZtQ';
-const FMP_BASE = 'https://financialmodelingprep.com/api/v3';
+const FMP_BASE = 'https://financialmodelingprep.com/stable';
 
 // ── LIVE PRICE via FMP ────────────────────────────────────────────────────────
 async function fetchPrecioVivo() {
@@ -701,7 +707,7 @@ async function fetchPrecioVivo() {
   btn.disabled=true; icon.textContent='⏳'; txte.textContent='Buscando...';
   btn.style.background='var(--amber)';
   try {
-    const r = await fetch(`${FMP_BASE}/quote/JEPI?apikey=${FMP_KEY}`);
+    const r = await fetch(`${FMP_BASE}/quote?symbol=JEPI&apikey=${FMP_KEY}`);
     const d = await r.json();
     if(!d||!d[0]) throw new Error('Sin datos');
     const q = d[0];
