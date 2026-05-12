@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d1117">
+<meta name="application-name" content="$JEPI Tracker">
+<meta name="apple-mobile-web-app-title" content="$JEPI">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>$JEPI Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2333;--bg4:#21262d;
+  --border:#30363d;--border2:#6e7681;
+  --text:#f0f6fc;--text2:#dde3ea;--text3:#b0bac5;
+  --green:#3fb950;--green2:#238636;--green-bg:rgba(63,185,80,.1);
+  --red:#f85149;--red-bg:rgba(248,81,73,.1);
+  --amber:#e3b341;--amber-bg:rgba(227,179,65,.1);
+  --blue:#58a6ff;--blue-bg:rgba(88,166,255,.1);
+  --purple:#bc8cff;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'IBM Plex Sans',sans-serif;
+  --r:6px;--nav-h:58px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;}
+input[type=number]::-webkit-inner-spin-button{opacity:1;}
+::-webkit-scrollbar{width:3px;height:3px;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh;}
+
+/* TOP BAR */
+.topbar{flex-shrink:0;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;gap:10px;z-index:10;}
+.tl{font-family:var(--sans);font-weight:700;font-size:16px;letter-spacing:-.3px;}
+.tl span{color:var(--green);}
+.ttag{font-size:9px;color:var(--text2);background:var(--bg3);border:1px solid var(--border);padding:2px 7px;border-radius:3px;letter-spacing:.06em;}
+.tpa{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.tp{font-size:20px;font-weight:600;font-family:var(--sans);}
+.tc{font-size:11px;padding:2px 8px;border-radius:4px;font-weight:500;}
+.tc.up{background:var(--green-bg);color:var(--green);}
+.tc.dn{background:var(--red-bg);color:var(--red);}
+.ldot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;animation:ping 2s infinite;}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(63,185,80,.4);}70%{box-shadow:0 0 0 7px rgba(63,185,80,0);}100%{box-shadow:0 0 0 0 rgba(63,185,80,0);}}
+
+/* ALERT */
+.astrip{flex-shrink:0;padding:7px 14px;font-size:11px;font-weight:500;display:none;align-items:center;gap:8px;border-bottom:1px solid;}
+.astrip.ok{background:var(--green-bg);border-color:rgba(63,185,80,.2);color:var(--green);display:flex;}
+.astrip.warn{background:var(--amber-bg);border-color:rgba(227,179,65,.2);color:var(--amber);display:flex;}
+.astrip.crit{background:var(--red-bg);border-color:rgba(248,81,73,.2);color:var(--red);display:flex;}
+
+/* PRICE BAR */
+.pbar{flex-shrink:0;background:var(--bg3);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.pbar label{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;}
+.pbar input{background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:5px 8px;color:var(--green);font-family:var(--mono);font-size:15px;font-weight:500;width:90px;}
+.pbar input:focus{outline:none;border-color:var(--green);}
+.ztag{font-size:10px;padding:3px 9px;border-radius:4px;font-weight:600;letter-spacing:.03em;white-space:nowrap;}
+.btn-yahoo{
+  margin-left:auto;padding:7px 13px;background:var(--blue);border:none;border-radius:4px;
+  color:#fff;font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer;
+  white-space:nowrap;letter-spacing:.03em;transition:background .15s;flex-shrink:0;
+}
+.btn-yahoo:active{background:#3d8be0;}
+.yinfo-bar{
+  flex-shrink:0;padding:6px 14px;
+  background:var(--bg3);border-bottom:1px solid var(--border);
+  font-size:10px;color:var(--text2);display:flex;align-items:center;gap:8px;
+}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;overflow-x:hidden;}
+
+/* NAV */
+.nav{flex-shrink:0;height:var(--nav-h);background:var(--bg2);border-top:1px solid var(--border);display:flex;z-index:10;}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:none;color:var(--text2);cursor:pointer;font-family:var(--mono);font-size:9px;letter-spacing:.03em;text-transform:uppercase;transition:color .15s;padding:4px 2px;}
+.nb .ni{font-size:17px;line-height:1;}
+.nb.active{color:var(--green);}
+.nb.active .ni{filter:drop-shadow(0 0 4px rgba(63,185,80,.5));}
+
+/* SECTIONS */
+.section{display:none;padding:12px 12px 78px;}
+.section.active{display:block;}
+@keyframes fu{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.section.active>*{animation:fu .18s ease both;}
+.section.active>*:nth-child(2){animation-delay:.04s;}
+.section.active>*:nth-child(3){animation-delay:.08s;}
+.section.active>*:nth-child(4){animation-delay:.12s;}
+
+/* KPI GRID */
+.kg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.kg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;position:relative;overflow:hidden;}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--border);}
+.kpi.g::after{background:var(--green);}
+.kpi.r::after{background:var(--red);}
+.kpi.a::after{background:var(--amber);}
+.kpi.b::after{background:var(--blue);}
+.kl{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;}
+.kv{font-size:18px;font-weight:600;font-family:var(--sans);line-height:1.1;}
+.kv.g{color:var(--green);}
+.kv.r{color:var(--red);}
+.kv.a{color:var(--amber);}
+.kv.b{color:var(--blue);}
+.ks{font-size:9px;color:var(--text2);margin-top:2px;}
+.mbar{height:3px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden;}
+.mbf{height:100%;border-radius:2px;transition:width .4s;}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;}
+.ch{padding:10px 14px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.ct{font-family:var(--sans);font-size:11px;font-weight:700;color:var(--text);letter-spacing:.04em;text-transform:uppercase;}
+
+/* TABLE */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table{width:100%;border-collapse:collapse;white-space:nowrap;}
+th{padding:7px 10px;font-size:9px;font-weight:700;color:var(--text);letter-spacing:.07em;text-transform:uppercase;border-bottom:1px solid var(--border2);background:var(--bg3);}
+td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text);font-size:12px;}
+tr:last-child td{border-bottom:none;}
+tr:active td{background:var(--bg3);}
+td.hi{color:var(--text);font-weight:500;}
+td.g{color:var(--green);}
+td.r{color:var(--red);}
+td.a{color:var(--amber);}
+td.b{color:var(--blue);}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600;}
+.badge.g{background:var(--green-bg);color:var(--green);}
+.badge.r{background:var(--red-bg);color:var(--red);}
+.badge.a{background:var(--amber-bg);color:var(--amber);}
+.badge.gray{background:var(--bg3);color:var(--text3);}
+
+/* CHART */
+.cwrap{padding:12px 14px 0;}
+.cwrap canvas{width:100%!important;}
+.cleg{display:flex;flex-wrap:wrap;gap:10px;padding:8px 14px 12px;font-size:10px;color:var(--text2);}
+.cli{display:flex;align-items:center;gap:5px;}
+.cld{width:16px;height:2px;border-radius:1px;}
+.rrow{display:flex;gap:4px;padding:0 14px 10px;}
+.rb{padding:4px 10px;font-size:10px;font-family:var(--mono);font-weight:500;border:1px solid var(--border2);border-radius:4px;background:none;color:var(--text2);cursor:pointer;transition:all .12s;}
+.rb.active{background:var(--green);border-color:var(--green);color:#000;}
+
+/* LIQ BARS */
+.liqsec{padding:10px 14px;}
+.lr{margin-bottom:14px;}
+.lrhd{display:flex;justify-content:space-between;font-size:10px;margin-bottom:5px;}
+.ltrack{position:relative;height:18px;background:var(--bg3);border-radius:4px;overflow:hidden;border:1px solid var(--border);}
+.lfill{height:100%;border-radius:3px;transition:width .4s;}
+.lmk{position:absolute;top:0;height:100%;width:1.5px;}
+.lmk.liq{background:var(--red);}
+.lmk.al{background:var(--amber);}
+.lft{display:flex;justify-content:space-between;font-size:9px;color:var(--text2);margin-top:3px;}
+
+/* FORM */
+.fbody{padding:12px 14px;}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.fg label{display:block;font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;}
+.fg input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:13px;}
+.fg input:focus{outline:none;border-color:var(--green);}
+.btnadd{width:100%;margin-top:6px;padding:11px;background:var(--green2);border:none;border-radius:4px;color:#fff;font-family:var(--mono);font-size:13px;font-weight:500;cursor:pointer;letter-spacing:.04em;}
+.btnadd:active{background:var(--green);}
+.btndel{background:none;border:1px solid var(--border);border-radius:3px;color:var(--red);font-size:11px;padding:3px 8px;cursor:pointer;}
+.btn-pdf{
+  position:fixed;bottom:calc(var(--nav-h) + 12px);right:14px;
+  width:48px;height:48px;border-radius:50%;
+  background:linear-gradient(135deg,#e3b341,#c9982a);
+  border:none;color:#000;font-size:20px;
+  box-shadow:0 4px 16px rgba(227,179,65,.4);
+  cursor:pointer;z-index:50;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .15s,box-shadow .15s;
+}
+.btn-pdf:active{transform:scale(.92);box-shadow:0 2px 8px rgba(227,179,65,.3);}
+.btn-pdf.loading{animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.pdf-toast{
+  position:fixed;bottom:calc(var(--nav-h) + 68px);right:14px;
+  background:var(--bg2);border:1px solid var(--border2);
+  color:var(--text);font-family:var(--mono);font-size:11px;
+  padding:8px 14px;border-radius:6px;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);
+  z-index:51;opacity:0;transition:opacity .2s;pointer-events:none;
+  white-space:nowrap;
+}
+.pdf-toast.show{opacity:1;}
+
+/* PROG */
+.prow{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:0 14px;}
+.plbl{font-size:10px;color:var(--text2);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ptrack{width:80px;flex-shrink:0;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;}
+.pfill{height:100%;border-radius:2px;}
+.pval{font-size:10px;color:var(--text2);width:70px;text-align:right;flex-shrink:0;}
+
+/* ── FETCH STATUS ── */
+.fst{font-size:10px;}
+.fst.ld{color:var(--amber);}
+.fst.ok{color:var(--green);}
+.fst.er{color:var(--red);}
+
+/* ── RULES ── */
+.rules{padding:10px 14px;display:flex;flex-direction:column;gap:6px;}
+.rule{background:var(--bg3);border-radius:4px;padding:8px 10px;font-size:11px;color:var(--text);border-left:3px solid var(--border);line-height:1.5;}
+.rule.g{border-color:var(--green);}
+.rule.a{border-color:var(--amber);}
+.rule.r{border-color:var(--red);}
+/* FETCH */
+.fst{font-size:10px;color:var(--text2);}
+.fst.ld{color:var(--amber);}
+.fst.ok{color:var(--green);}
+.fst.er{color:var(--red);}
+
+/* RULES */
+.rules{padding:10px 14px;display:flex;flex-direction:column;gap:6px;}
+.rule{background:var(--bg3);border-radius:4px;padding:8px 10px;font-size:11px;color:var(--text);border-left:3px solid var(--border);line-height:1.5;}
+.rule.g{border-color:var(--green);}
+.rule.a{border-color:var(--amber);}
+.rule.r{border-color:var(--red);}
+strong{color:var(--text);font-weight:600;}
+
+/* ══ MOBILE COMPACT HEADER (≤768px) ══ */
+@media (max-width:768px){
+  /* Topbar — 1 sola línea compacta */
+  .topbar{padding:6px 10px;gap:6px;}
+  .tl{font-size:13px;line-height:1;}
+  .ttag{display:none;} /* ocultar DCA APAL */
+  #saveStatus{display:none;} /* ocultar contador de posiciones — está en pestaña posiciones */
+  .ldot{width:6px;height:6px;}
+  .tp{font-size:16px;line-height:1;}
+  .tc{font-size:9px;padding:1px 5px;}
+
+  /* Alert strip — más delgada */
+  .astrip{padding:4px 10px;font-size:10px;line-height:1.3;}
+
+  /* Price bar — input + zone + botón en 1 línea */
+  .pbar{padding:5px 10px;gap:6px;flex-wrap:nowrap;}
+  .pbar label{display:none;} /* ocultar "PRECIO $JEPI" */
+  .pbar input{width:80px;font-size:14px;padding:4px 6px;}
+  .ztag{font-size:9px;padding:2px 6px;}
+  .btn-yahoo{padding:5px 10px;font-size:10px;margin-left:auto;}
+  #btnLiveTxt{display:none;} /* ocultar texto del botón, solo ícono */
+  #btnLive #btnLiveIcon{font-size:13px;}
+  /* mostrar texto solo en estado de éxito/error */
+  #btnLive.show-txt #btnLiveTxt{display:inline;font-size:10px;}
+
+  /* Yinfo bar — 2 líneas si es necesario, con mejor formato */
+  .yinfo-bar{padding:5px 10px;font-size:9px;line-height:1.4;flex-wrap:wrap;gap:5px;}
+  .yinfo-bar span{white-space:nowrap;}
+
+  /* Secciones — menos padding lateral en móvil */
+  .section{padding:10px 10px 70px;}
+  /* dash-charts-row stacks on mobile */
+  .dash-charts-row{display:block;}
+}
+
+/* ══ DESKTOP — mejor uso del espacio (≥769px) ══ */
+@media (min-width:769px){
+  /* Centrar contenido con max-width — evitar que se estire feo */
+  .topbar,.astrip,.pbar,.yinfo-bar{
+    padding-left:max(24px,calc((100vw - 1280px)/2));
+    padding-right:max(24px,calc((100vw - 1280px)/2));
+  }
+  .content{max-width:1280px;margin:0 auto;width:100%;}
+
+  /* Header más cómodo */
+  .topbar{padding-top:14px;padding-bottom:14px;gap:14px;}
+  .tl{font-size:18px;}
+  .ttag{font-size:10px;padding:3px 9px;}
+  #saveStatus{font-size:11px;}
+  .tp{font-size:22px;}
+  .tc{font-size:12px;padding:3px 9px;}
+
+  /* Alert strip más alta y legible */
+  .astrip{padding-top:9px;padding-bottom:9px;font-size:12px;}
+
+  /* Price bar más cómoda */
+  .pbar{padding-top:10px;padding-bottom:10px;gap:14px;}
+  .pbar label{font-size:11px;}
+  .pbar input{font-size:17px;width:110px;padding:6px 10px;}
+  .ztag{font-size:11px;padding:4px 11px;}
+  .btn-yahoo{padding:8px 16px;font-size:12px;}
+
+  /* Yinfo bar más legible */
+  .yinfo-bar{padding-top:7px;padding-bottom:7px;font-size:11px;gap:10px;}
+
+  /* Sección con max-width */
+  .section{padding:20px 24px 30px;max-width:1280px;margin:0 auto;width:100%;}
+
+  /* KPIs — grilla horizontal 4 columnas, valores grandes */
+  .kg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .kg3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .kpi{padding:14px 18px;}
+  .kl{font-size:10px;margin-bottom:6px;}
+  .kv{font-size:22px;}
+  .ks{font-size:10px;margin-top:4px;}
+
+  /* Dividendo mensual destacado — full width 2 cols, no toda la pantalla */
+  #k-div{grid-column:span 2;padding:16px 20px!important;}
+  #k-div .kv{font-size:28px!important;}
+
+  /* Cards — 2 columnas en desktop para gráfico y dividendos */
+  #tab-dash .card:has(#priceChart){display:block;}
+  .dash-charts-row{display:grid;grid-template-columns:3fr 2fr;gap:14px;margin-bottom:14px;}
+
+  /* Gráficas más altas y legibles */
+  #priceChart{height:340px!important;}
+  #divChart{height:240px!important;}
+
+  /* Tablas — más cómodas */
+  th{padding:10px 14px;font-size:11px;}
+  td{padding:11px 14px;font-size:13px;}
+
+  /* Card headers más prominentes */
+  .ch{padding:12px 18px;}
+  .ct{font-size:13px;}
+
+  /* Range buttons del gráfico */
+  .rb{padding:6px 14px;font-size:11px;}
+
+  /* Nav inferior — botones más compactos y centrados, no enormes */
+  .nav{
+    max-width:1280px;
+    margin:0 auto;
+    width:100%;
+    padding:0 24px;
+  }
+  .nb{font-size:10px;padding:8px 4px;max-width:140px;}
+  .nb .ni{font-size:20px;}
+
+  /* Liq bars más visibles */
+  .ltrack{height:22px;}
+  .lrhd{font-size:11px;}
+  .lft{font-size:10px;}
+
+  /* Form más cómodo */
+  .frow{grid-template-columns:repeat(3,1fr);gap:10px;}
+  .fg label{font-size:10px;}
+  .fg input{font-size:13px;padding:9px 11px;}
+  .btnadd{padding:12px;font-size:13px;margin-top:8px;}
+
+  /* Reglas */
+  .rule{font-size:12px;padding:10px 14px;}
+
+  /* Progress bars en alertas */
+  .prow{margin-bottom:10px;}
+  .plbl{font-size:11px;}
+  .pval{font-size:11px;width:90px;}
+  .ptrack{width:140px;height:5px;}
+
+  /* PDF overlay más grande */
+  #pdfOverlay>div{max-width:420px!important;padding:36px 40px!important;}
+}
+
+.scen-cur td{background:var(--bg3)!important;color:var(--text)!important;}
+.nb-pdf{background:linear-gradient(135deg,rgba(63,185,80,.15),rgba(88,166,255,.1));border-left:1px solid var(--border);}
+.nb-pdf.loading{pointer-events:none;opacity:.7;}
+#pdfOverlay.show{display:flex!important;}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="tl"><span>$JEPI</span> Tracker</div>
+    <div class="ttag">DCA APAL.</div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text3);" id="saveStatus">
+      <span id="saveIcon">💾</span><span id="saveLbl">—</span>
+    </div>
+    <div class="tpa">
+      <div class="ldot"></div>
+      <div class="tp" id="topPrice">—</div>
+      <div class="tc" id="topChange">—</div>
+    </div>
+  </div>
+
+  <div class="astrip" id="astrip"><span id="amsg">—</span></div>
+
+  <div class="pbar">
+    <label>Precio $JEPI</label>
+    <input type="number" id="precioInput" step="0.01" value="57.54"
+      inputmode="decimal" oninput="recalcAll()" onchange="recalcAll()">
+    <div class="ztag" id="ztag">—</div>
+    <button class="btn-yahoo" id="btnLive" onclick="fetchPrecioVivo()">
+      <span id="btnLiveIcon">⚡</span> <span id="btnLiveTxt">Actualizar precio</span>
+    </button>
+  </div>
+  <div class="yinfo-bar" id="yinfoBar">—</div>
+
+  <div class="content" id="ca">
+
+    <!-- DASHBOARD -->
+    <div class="section active" id="tab-dash">
+      <div class="kg">
+        <div class="kpi b" id="k-inv"></div>
+        <div class="kpi" id="k-acc"></div>
+      </div>
+      <div class="kpi g" id="k-div" style="margin-bottom:10px;padding:12px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--green);"></div>
+      </div>
+      <div class="kg">
+        <div class="kpi" id="k-pl"></div>
+        <div class="kpi a" id="k-col"></div>
+      </div>
+      <div class="kg3">
+        <div class="kpi" id="k-yield"></div>
+        <div class="kpi" id="k-divac"></div>
+        <div class="kpi" id="k-alert"></div>
+      </div>
+      <div class="dash-charts-row">
+      <div class="card">
+        <div class="ch">
+          <span class="ct">Precio $JEPI</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="fst ld" id="fst">Cargando...</span>
+          </div>
+        </div>
+        <div class="rrow" style="padding:10px 14px 0;">
+          <button class="rb" onclick="loadRange('1mo',this)">1M</button>
+          <button class="rb active" onclick="loadRange('3mo',this)">3M</button>
+          <button class="rb" onclick="loadRange('6mo',this)">6M</button>
+          <button class="rb" onclick="loadRange('1y',this)">1A</button>
+          <button class="rb" onclick="loadRange('2y',this)">2A</button>
+        </div>
+        <div class="cwrap"><canvas id="priceChart" height="200" role="img" aria-label="Historial precio JEPI"></canvas></div>
+        <div class="cleg">
+          <div class="cli"><div class="cld" style="background:var(--blue);"></div>JEPI</div>
+          <div class="cli"><div class="cld" style="border-top:2px dashed var(--red);background:none;"></div>Mín.$49.52</div>
+          <div class="cli"><div class="cld" style="border-top:2px dashed var(--green);background:none;"></div>Entrada</div>
+          <div class="cli"><div class="cld" style="border-top:2px dashed var(--amber);background:none;"></div>Alarma</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><span class="ct">Dividendos est. vs real</span></div>
+        <div class="cwrap"><canvas id="divChart" height="150" role="img" aria-label="Dividendos est vs real"></canvas></div>
+        <div style="height:12px;"></div>
+      </div>
+    </div>
+
+    <!-- ALERTAS -->
+    <div class="section" id="tab-alert">
+      <div class="card">
+        <div class="ch"><span class="ct">Barras de liquidación</span></div>
+        <div class="liqsec" id="liqBars"></div>
+      </div>
+      <div class="card">
+        <div class="ch"><span class="ct">Detalle por posición</span></div>
+        <div class="tw">
+          <table><thead><tr><th>Mes</th><th>Liq.</th><th>Alarma</th><th>DistLiq</th><th>DistMin</th><th>Estado</th></tr></thead>
+          <tbody id="liqTb"></tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><span class="ct">Márgenes globales</span></div>
+        <div id="marg" style="padding:10px 0;"></div>
+      </div>
+      <div class="card">
+        <div class="ch"><span class="ct">Reglas del plan</span></div>
+        <div class="rules">
+          <div class="rule a">🟡 <strong>Alarma −8%</strong> — aporta $150–200 del colchón como margen. No esperes aviso del broker.</div>
+          <div class="rule r">🔴 <strong>Línea roja ($300)</strong> — si el colchón baja de $300 pausa hasta reconstruirlo.</div>
+          <div class="rule g">⚫ <strong>Regla de oro</strong> — NUNCA uses el colchón para abrir posición nueva.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POSICIONES -->
+    <div class="section" id="tab-pos">
+      <div class="card">
+        <div class="ch">
+          <span class="ct">Posiciones</span>
+          <span style="font-size:10px;color:var(--text3);" id="posCnt">—</span>
+        </div>
+        <div class="tw">
+          <table><thead><tr><th>#</th><th>Mes</th><th>Entrada</th><th>Apal</th><th>Aport</th><th>Acc</th><th>Exp</th><th>P&L$</th><th>P&L%</th><th>Div/mes</th><th>Est</th><th></th></tr></thead>
+          <tbody id="posTb"></tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><span class="ct">+ Nueva posición</span></div>
+        <div class="fbody">
+          <div class="frow">
+            <div class="fg"><label>Mes</label><input type="text" id="nMes" placeholder="Jun 2026"></div>
+            <div class="fg"><label>Precio compra</label><input type="number" id="nPrecio" step="0.01" placeholder="57.00"></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label>Apalancamiento</label><input type="number" id="nApal" value="5" min="1" max="10"></div>
+            <div class="fg"><label>Aportación USD</label><input type="number" id="nAport" step="0.01" placeholder="400"></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label>Div/acción</label><input type="number" id="nDiv" step="0.001" placeholder="0.351"></div>
+            <div class="fg"><label>Div real cobrado</label><input type="number" id="nDivReal" step="0.01" placeholder="0.00"></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label>Fecha ex-dividendo</label><input type="date" id="nExDiv"></div>
+            <div class="fg" style="display:flex;align-items:flex-end;"><div style="font-size:9px;color:var(--text3);line-height:1.5;">Fecha en que JEPI<br>marca ex-dividendo</div></div>
+          </div>
+          <button class="btnadd" onclick="addPos()">+ AÑADIR POSICIÓN</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DIVIDENDOS -->
+    <div class="section" id="tab-div">
+      <div class="kg3" id="divKpis"></div>
+      <div class="card">
+        <div class="ch"><span class="ct">Registro mensual</span></div>
+        <div class="tw">
+          <table><thead><tr><th>Mes</th><th>Acc</th><th>Div/acc</th><th>Estim.</th><th>Real</th><th>Dif.</th><th>Acum.</th></tr></thead>
+          <tbody id="divTb"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ESCENARIOS -->
+    <div class="section" id="tab-scen">
+      <div class="card">
+        <div class="ch"><span class="ct">Escenarios de precio</span></div>
+        <div class="tw">
+          <table><thead><tr><th>Escenario</th><th>Precio</th><th>P&L$</th><th>Yield</th><th>DivAn</th><th>Ret.Total</th><th>%</th></tr></thead>
+          <tbody id="scenTb"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLCHÓN -->
+    <div class="section" id="tab-col">
+      <div class="kg" id="colKpis"></div>
+      <div class="card">
+        <div class="ch"><span class="ct">Progreso del colchón</span></div>
+        <div id="colProg" style="padding:10px 0;"></div>
+      </div>
+      <div class="card">
+        <div class="ch"><span class="ct">Registro mensual</span></div>
+        <div class="tw">
+          <table><thead><tr><th>Mes</th><th>Reserva</th><th>Div. real</th><th>Acum.</th><th>Cobertura</th><th>Estado</th></tr></thead>
+          <tbody id="colTb"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <nav class="nav">
+    <button class="nb active" onclick="showTab('dash',this)"><span class="ni">📊</span>Dashboard</button>
+    <button class="nb" onclick="showTab('alert',this)"><span class="ni">⚠️</span>Alertas</button>
+    <button class="nb" onclick="showTab('pos',this)"><span class="ni">📋</span>Posiciones</button>
+    <button class="nb" onclick="showTab('div',this)"><span class="ni">💰</span>Dividendos</button>
+    <button class="nb" onclick="showTab('scen',this)"><span class="ni">🎯</span>Escenarios</button>
+    <button class="nb" onclick="showTab('col',this)"><span class="ni">🛡️</span>Colchón</button>
+    <button class="nb nb-pdf" id="btnPdf" onclick="exportPDF()"><span class="ni" id="pdfIcon">📄</span><span id="pdfTxt">PDF</span></button>
+  </nav>
+
+  <!-- PDF OVERLAY -->
+  <div id="pdfOverlay" style="display:none;position:fixed;inset:0;background:rgba(13,17,23,.92);z-index:999;
+    display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+    <div style="background:#161b22;border:1px solid #30363d;border-radius:10px;padding:28px 32px;
+      text-align:center;max-width:320px;width:90%;">
+      <div id="pdfSpinner" style="font-size:40px;margin-bottom:12px;">📄</div>
+      <div id="pdfOverlayTitle" style="font-family:IBM Plex Sans,sans-serif;font-size:16px;font-weight:700;
+        color:#f0f6fc;margin-bottom:6px;">Generando reporte PDF</div>
+      <div id="pdfOverlayMsg" style="font-size:11px;color:#8b949e;line-height:1.6;margin-bottom:16px;">
+        Claude está analizando tu portafolio y generando el reporte...</div>
+      <div style="width:100%;height:3px;background:#1c2333;border-radius:2px;overflow:hidden;">
+        <div id="pdfProgressBar" style="height:100%;background:#3fb950;border-radius:2px;width:0%;transition:width .4s;"></div>
+      </div>
+    </div>
+  </div>
+  <!-- PDF FAB -->
+  <div class="pdf-toast" id="pdfToast">—</div>
+</div>
+
+<script>
+const P={reservaMes:200,minHist:49.52,divRef:0.351,alarmaPct:.08,linRoja:300};
+let posiciones=[
+  {mes:'Abril 2026',precio:55.84,apal:5,aport:402.048,divAcc:0.4205,divReal:15.14,exDiv:'2026-04-01'},
+  {mes:'Mayo 2026', precio:57.47,apal:5,aport:827.568,divAcc:0.4476,divReal:48.34,exDiv:'2026-05-01'}
+];
+let pChart=null,dChart=null;
+
+function zone(p){
+  if(p>58)    return{lbl:'🔴 CARA x2',    col:'var(--red)',   cls:'r',x:2};
+  if(p>=54)   return{lbl:'🟡 NEUTRAL x5', col:'var(--amber)', cls:'a',x:5};
+  if(p>=52)   return{lbl:'🟢 VALOR x6',   col:'var(--green)', cls:'g',x:6};
+  if(p>=50)   return{lbl:'🔵 PROFUNDA x7',col:'var(--blue)',  cls:'b',x:7};
+  if(p>=49.52)return{lbl:'🟣 MÍN.HIST x8',col:'var(--purple)',cls:'p',x:8};
+  return       {lbl:'🟠 NUEVO x3',        col:'var(--amber)', cls:'a',x:3};
+}
+
+function calc(p,px){
+  const acc=Math.floor(p.aport*p.apal/p.precio);
+  const exp=acc*p.precio, liq=p.precio*(1-1/p.apal), al=p.precio*(1-P.alarmaPct);
+  const pl=(px-p.precio)*acc, plp=(px-p.precio)/p.precio, dm=acc*p.divAcc;
+  return{acc,exp,liq,al,pl,plp,dm,
+    enLiq:px<=liq, enAl:px<=al&&px>liq,
+    distLiq:(px-liq)/px, distMin:(p.precio-P.minHist)/p.precio};
+}
+
+function pmed(px){
+  const tA=posiciones.reduce((s,p)=>s+calc(p,px).acc,0);
+  return posiciones.reduce((s,p)=>s+p.precio*calc(p,px).acc,0)/tA;
+}
+
+function recalcAll(){
+  const px=parseFloat(document.getElementById('precioInput').value)||57.54;
+  const z=zone(px);
+  // Use real divAcc from positions if available, else fallback to P.divRef
+  const yldRef = posiciones.length
+    ? posiciones.reduce((s,p)=>s+(p.divAcc||P.divRef)*calc(p,px).acc,0) /
+      posiciones.reduce((s,p)=>s+calc(p,px).acc,0)
+    : P.divRef;
+  const yld = (yldRef*12/px*100).toFixed(2);
+  const zt=document.getElementById('ztag');
+  zt.textContent=z.lbl; zt.style.background=z.col+'22'; zt.style.color=z.col;
+  const lastUpd=localStorage.getItem('jepi_lastprice_time');
+  const updLbl=lastUpd?'Actualizado '+new Date(parseInt(lastUpd)).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}):'Sin actualizar aún';
+  document.getElementById('yinfoBar').innerHTML=`<span>Yield <strong>${yld}%</strong></span><span>·</span><span>Apal. sugerido <strong>x${z.x}</strong></span><span>·</span><span>Margen vs mín. <strong>${((px-P.minHist)/px*100).toFixed(1)}%</strong></span><span style="margin-left:auto;color:var(--text3);">🕐 ${updLbl}</span>`;
+
+  let tAcc=0,tExp=0,tPL=0,tDiv=0,tInv=0,dAcum=0,anyLiq=false,anyAl=false;
+  posiciones.forEach(p=>{
+    const c=calc(p,px);
+    tAcc+=c.acc;tExp+=c.exp;tPL+=c.pl;tDiv+=c.dm;tInv+=p.aport;dAcum+=(p.divReal||0);
+    if(c.enLiq)anyLiq=true; if(c.enAl)anyAl=true;
+  });
+  const col=posiciones.length*P.reservaMes+dAcum;
+
+  document.getElementById('topPrice').textContent='$'+px.toFixed(2);
+
+  const as=document.getElementById('astrip');
+  if(anyLiq){as.className='astrip crit';document.getElementById('amsg').textContent='🚨 LIQUIDACIÓN — aporta margen y contacta a tu broker ahora.';}
+  else if(anyAl){as.className='astrip warn';document.getElementById('amsg').textContent='⚠️ ALARMA −8% — aporta $150–200 del colchón como margen adicional.';}
+  else if(col<P.linRoja){as.className='astrip warn';document.getElementById('amsg').textContent='🛡️ COLCHÓN BAJO $'+col.toFixed(0)+' — pausa y reconstruye antes de abrir nuevas posiciones.';}
+  else{as.className='astrip ok';document.getElementById('amsg').textContent='✓ Todo en orden — posiciones seguras · colchón saludable';}
+
+  // KPIs
+  kpi('k-inv','Capital invertido','$'+tInv.toFixed(0),tAcc+' acc · $'+tExp.toFixed(0)+' exp','b');
+  kpi('k-acc','Acciones',tAcc,'precio medio $'+(tAcc>0?pmed(px).toFixed(2):'—'),'');
+  document.getElementById('k-div').innerHTML=`<div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--green);"></div>
+    <div class="kl">Dividendo mensual estimado</div>
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
+      <div class="kv g" style="font-size:24px;">$${tDiv.toFixed(2)}</div>
+      <div style="font-size:11px;color:var(--text3);">${(tDiv/tInv*100).toFixed(2)}%/mes · $${(tDiv*12).toFixed(2)}/año</div>
+    </div>`;
+  kpiBar('k-pl','P&L precio',(tPL>=0?'+':'')+'$'+tPL.toFixed(2),(tPL/tInv*100).toFixed(2)+'% del capital',tPL>=0?'g':'r',0,'');
+  kpiBar('k-col','Colchón total','$'+col.toFixed(2),col<P.linRoja?'⚠️ bajo línea roja':'✓ saludable','a',Math.min(col/500*100,100),col<P.linRoja?'var(--red)':'var(--green)');
+  kpi('k-yield','Yield efectivo',(tDiv/tInv*100).toFixed(2)+'%','sobre capital','a');
+  kpi('k-divac','Div. acumulado','$'+dAcum.toFixed(2),'real cobrado','g');
+  kpi('k-alert','Alertas',anyLiq?'CRÍTICO':anyAl?'ALARMA':'OK',anyLiq?'liq.inminente':anyAl?'umbral cruzado':'sin alertas',anyLiq?'r':anyAl?'a':'g');
+
+  renderAlertas(px,col);renderPosiciones(px);renderDividendos(px);renderEscenarios(px,tAcc,tInv,dAcum);renderColchon(dAcum,col);
+}
+
+function kpi(id,lbl,val,sub,cls){document.getElementById(id).innerHTML=`<div class="kl">${lbl}</div><div class="kv ${cls}">${val}</div><div class="ks">${sub}</div>`;}
+function kpiBar(id,lbl,val,sub,cls,pct,col){document.getElementById(id).innerHTML=`<div class="kl">${lbl}</div><div class="kv ${cls}">${val}</div><div class="ks">${sub}</div>${pct?`<div class="mbar"><div class="mbf" style="width:${pct.toFixed(0)}%;background:${col};"></div></div>`:''}`;}
+
+function renderAlertas(px,col){
+  let bars='';
+  posiciones.forEach(p=>{
+    const c=calc(p,px);
+    const lo=Math.min(c.liq*.93,42),hi=Math.max(px*1.07,64),rng=hi-lo;
+    const lPct=Math.max(0,Math.min(100,(c.liq-lo)/rng*100));
+    const aPct=Math.max(0,Math.min(100,(c.al-lo)/rng*100));
+    const prPct=Math.max(0,Math.min(100,(px-lo)/rng*100));
+    const c2=c.enLiq?'var(--red)':c.enAl?'var(--amber)':'var(--green)';
+    bars+=`<div class="lr">
+      <div class="lrhd"><span style="color:var(--text2);">${p.mes} · x${p.apal} · $${p.precio.toFixed(2)}</span><span style="color:${c2};">${c.enLiq?'🚨 LIQ':c.enAl?'⚠️ AL':'✓ OK'}</span></div>
+      <div class="ltrack"><div class="lfill" style="width:${prPct}%;background:${c2};opacity:.15;"></div><div class="lmk liq" style="left:${lPct}%;"></div><div class="lmk al" style="left:${aPct}%;"></div></div>
+      <div class="lft"><span style="color:var(--red);">Liq $${c.liq.toFixed(2)}</span><span style="color:var(--amber);">Al $${c.al.toFixed(2)}</span><span style="color:var(--text);">Now $${px.toFixed(2)}</span></div>
+    </div>`;
+  });
+  document.getElementById('liqBars').innerHTML=bars;
+
+  let liqRows='';
+  posiciones.forEach(p=>{
+    const c=calc(p,px);const sc=c.enLiq?'r':c.enAl?'a':'g';
+    liqRows+=`<tr><td class="hi">${p.mes.split(' ')[0]}</td><td class="r">$${c.liq.toFixed(2)}</td><td class="a">$${c.al.toFixed(2)}</td><td class="${c.distLiq<.1?'a':'g'}">${(c.distLiq*100).toFixed(1)}%</td><td>${(c.distMin*100).toFixed(1)}%</td><td><span class="badge ${sc}">${c.enLiq?'🚨 LIQ':c.enAl?'⚠️ AL':'✓ OK'}</span></td></tr>`;
+  });
+  document.getElementById('liqTb').innerHTML=liqRows;
+
+  const liqMin=Math.min(...posiciones.map(p=>calc(p,px).liq));
+  document.getElementById('marg').innerHTML=
+    pr('Colchón vs línea roja',Math.min(col/P.linRoja*100,100),col<P.linRoja?'var(--red)':'var(--green)','$'+col.toFixed(0)+'/300')+
+    pr('Precio vs liq. cercana',Math.min((px-liqMin)/px*400,100),'var(--blue)','$'+px.toFixed(2)+' vs $'+liqMin.toFixed(2))+
+    pr('Precio vs mín. histórico',Math.min((px-P.minHist)/px*300,100),'var(--purple)','$'+px.toFixed(2)+' vs $'+P.minHist);
+}
+
+function pr(lbl,pct,col,val){return`<div class="prow"><div class="plbl">${lbl}</div><div class="ptrack"><div class="pfill" style="width:${pct.toFixed(0)}%;background:${col};"></div></div><div class="pval">${val}</div></div>`;}
+
+function renderPosiciones(px){
+  let rows='';
+  posiciones.forEach((p,i)=>{
+    const c=calc(p,px);const sc=c.enLiq?'r':c.enAl?'a':c.pl>=0?'g':'r';
+    rows+=`<tr><td class="hi">${i+1}</td><td class="hi">${p.mes.split(' ')[0]}</td><td>$${p.precio.toFixed(2)}</td><td>x${p.apal}</td><td>$${p.aport.toFixed(0)}</td><td>${c.acc}</td><td>$${c.exp.toFixed(0)}</td><td class="${c.pl>=0?'g':'r'}">${c.pl>=0?'+':''}$${c.pl.toFixed(2)}</td><td class="${c.pl>=0?'g':'r'}">${(c.plp*100).toFixed(1)}%</td><td class="g">$${c.dm.toFixed(2)}</td><td><span class="badge ${sc}">${c.enLiq?'🚨':c.enAl?'⚠️':c.pl>=0?'✓':'↓'}</span></td><td><button class="btndel" onclick="delPos(${i})">×</button></td></tr>`;
+  });
+  document.getElementById('posTb').innerHTML=rows;
+  document.getElementById('posCnt').textContent=posiciones.length+' posición(es)';
+}
+
+function renderDividendos(px){
+  let dA=0,rows='',labels=[],est=[],real2=[];
+  posiciones.forEach(p=>{
+    const c=calc(p,px),dr=p.divReal||0;dA+=dr;
+    const dif=dr-c.dm;
+    labels.push(p.mes.split(' ')[0]);est.push(parseFloat(c.dm.toFixed(2)));real2.push(parseFloat(dr.toFixed(2)));
+    rows+=`<tr><td class="hi">${p.mes.split(' ')[0]}</td><td>${c.acc}</td><td>$${p.divAcc.toFixed(4)}</td><td class="a">$${c.dm.toFixed(2)}</td><td class="g">$${dr.toFixed(2)}</td><td class="${dif>=0?'g':'r'}">${dif>=0?'+':''}$${dif.toFixed(2)}</td><td>$${dA.toFixed(2)}</td></tr>`;
+  });
+  document.getElementById('divTb').innerHTML=rows;
+  const tD=posiciones.reduce((s,p)=>s+calc(p,px).dm,0),tI=posiciones.reduce((s,p)=>s+p.aport,0);
+  document.getElementById('divKpis').innerHTML=`<div class="kpi g"><div class="kl">Div. mensual</div><div class="kv g">$${tD.toFixed(2)}</div></div><div class="kpi"><div class="kl">Div. real acum.</div><div class="kv g">$${dA.toFixed(2)}</div></div><div class="kpi a"><div class="kl">Yield eff.</div><div class="kv a">${(tD/tI*100).toFixed(2)}%</div></div>`;
+  if(dChart){dChart.destroy();dChart=null;}
+  if(labels.length){dChart=new Chart(document.getElementById('divChart'),{type:'bar',data:{labels,datasets:[{label:'Estimado',data:est,backgroundColor:'rgba(88,166,255,.45)',borderRadius:4},{label:'Real',data:real2,backgroundColor:'rgba(63,185,80,.55)',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#b0bac5',font:{family:'IBM Plex Mono',size:10}}}},scales:{x:{ticks:{color:'#8b949e',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#8b949e',font:{size:10},callback:v=>'$'+v},grid:{color:'rgba(255,255,255,0.04)'}}}}})}
+}
+
+function renderEscenarios(px,tAcc,tInv,dAcum){
+  if(!tAcc)return;
+  const dAn=tAcc*P.divRef*12,pm=pmed(px);
+  const sc=[{l:'🟠 Nuevo',p:44},{l:'🟣 Mín.Hist',p:49.52},{l:'🔵 Profunda',p:51},{l:'🟢 Valor',p:53},{l:'⚪ Actual',p:parseFloat(px.toFixed(2))},{l:'🟡 Neutral',p:57},{l:'🔴 Cara',p:59},{l:'📈 Recup.',p:62},{l:'📈 Optim.',p:68},{l:'📈 Ambic.',p:75}];
+  let rows='';
+  sc.forEach(s=>{
+    const pl=(s.p-pm)*tAcc,y=(P.divRef*12/s.p*100).toFixed(2),ret=pl+dAcum,r=(ret/tInv*100).toFixed(2),isCur=Math.abs(s.p-px)<0.01;
+    rows+=`<tr ${isCur?'class="scen-cur"':''}><td class="hi">${s.l}</td><td>$${s.p.toFixed(2)}</td><td class="${pl>=0?'g':'r'}">${pl>=0?'+':''}$${pl.toFixed(0)}</td><td class="a">${y}%</td><td class="g">$${dAn.toFixed(0)}</td><td class="${ret>=0?'g':'r'}">${ret>=0?'+':''}$${ret.toFixed(0)}</td><td class="${ret>=0?'g':'r'}">${r}%</td></tr>`;
+  });
+  document.getElementById('scenTb').innerHTML=rows;
+}
+
+function renderColchon(dAcum,col){
+  const lr=col<P.linRoja;
+  document.getElementById('colKpis').innerHTML=`<div class="kpi ${lr?'r':'g'}"><div class="kl">Colchón total</div><div class="kv ${lr?'r':'g'}">$${col.toFixed(2)}</div><div class="mbar"><div class="mbf" style="width:${Math.min(col/500*100,100).toFixed(0)}%;background:${lr?'var(--red)':'var(--green)'};"></div></div></div><div class="kpi ${lr?'r':'g'}"><div class="kl">Estado</div><div class="kv ${lr?'r':'g'}">${lr?'⚠️ LÍNEA ROJA':'✓ OK'}</div></div>`;
+  document.getElementById('colProg').innerHTML=pr('Colchón vs meta $500',Math.min(col/500*100,100),lr?'var(--red)':'var(--green)','$'+col.toFixed(0)+'/500')+pr('Div.acum. real',Math.min(dAcum/500*100,100),'var(--green)','$'+dAcum.toFixed(0))+pr('Posiciones vs plan (25)',Math.min(posiciones.length/25*100,100),'var(--blue)',posiciones.length+'/25');
+  let rows='',acum=0;
+  posiciones.forEach((p,i)=>{
+    const res=i===0?402.048:0,dr=p.divReal||0;acum+=res+dr;
+    const cob=(acum/P.reservaMes).toFixed(1);
+    rows+=`<tr><td class="hi">${p.mes.split(' ')[0]}</td><td>$${res.toFixed(2)}</td><td class="g">$${dr.toFixed(2)}</td><td>$${acum.toFixed(2)}</td><td>${cob} meses</td><td><span class="badge ${acum<300?'r':acum<400?'a':'g'}">${acum<300?'⚠️ bajo':'✓ ok'}</span></td></tr>`;
+  });
+  document.getElementById('colTb').innerHTML=rows;
+}
+
+function addPos(){
+  const mes=document.getElementById('nMes').value.trim(),pr2=parseFloat(document.getElementById('nPrecio').value),ap=parseFloat(document.getElementById('nApal').value),ao=parseFloat(document.getElementById('nAport').value),da=parseFloat(document.getElementById('nDiv').value)||P.divRef,dr=parseFloat(document.getElementById('nDivReal').value)||0,exDiv=document.getElementById('nExDiv').value||'';
+  if(!mes||isNaN(pr2)||isNaN(ap)||isNaN(ao)){alert('Completa: Mes, Precio, Apalancamiento y Aportación.');return;}
+  posiciones.push({mes,precio:pr2,apal:ap,aport:ao,divAcc:da,divReal:dr,exDiv});
+  ['nMes','nPrecio','nAport','nDivReal','nExDiv'].forEach(id=>document.getElementById(id).value='');
+  recalcAll();
+}
+function delPos(i){if(!confirm('¿Eliminar '+posiciones[i].mes+'?'))return;posiciones.splice(i,1);recalcAll();}
+
+function showTab(tab,el){
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('ca').scrollTop=0;
+}
+
+async function loadRange(range,btn){
+  if(btn){document.querySelectorAll('.rb').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+  const st=document.getElementById('fst');
+  st.textContent='Cargando...'; st.className='fst ld';
+  try{
+    const px=parseFloat(document.getElementById('precioInput').value)||57.54;
+    const rangeMap={'1mo':'1mo','3mo':'3mo','6mo':'6mo','1y':'1y','2y':'2y'};
+    const r=range||'3mo';
+
+    // Try multiple CORS proxies for resilience
+    const yahooUrl=`https://query1.finance.yahoo.com/v8/finance/chart/JEPI?range=${r}&interval=1d&events=div`;
+    const proxies=[
+      `https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`,
+      `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,
+    ];
+    let data=null;
+    for(const proxyUrl of proxies){
+      try{
+        const res=await fetch(proxyUrl,{signal:AbortSignal.timeout(8000)});
+        if(!res.ok) continue;
+        const raw=await res.text();
+        // allorigins wraps in {contents:...}, corsproxy returns direct JSON
+        const parsed=JSON.parse(raw);
+        data=parsed.contents?JSON.parse(parsed.contents):parsed;
+        if(data?.chart?.result?.[0]) break;
+      }catch(e){ continue; }
+    }
+    if(!data) throw new Error('No se pudo conectar con ningún proxy');
+
+    const result=data?.chart?.result?.[0];
+    if(!result) throw new Error('Sin datos');
+
+    const ts=result.timestamp;
+    const cls=result.indicators.quote[0].close;
+    const divEvts=result.events?.dividends||{};
+
+    const labels=ts.map(t=>{
+      const d=new Date(t*1000);
+      return d.toLocaleDateString('es-ES',{day:'2-digit',month:'short'});
+    });
+    const prices=cls.map(c=>c!=null?parseFloat(c.toFixed(2)):null);
+    const valid=prices.filter(p=>p!=null&&!isNaN(p));
+    if(!valid.length) throw new Error('Sin precios');
+    const mx=Math.max(...valid), mn=Math.min(...valid);
+    const last=valid[valid.length-1];
+    const prev=valid[valid.length-2];
+    const ch=(last-prev).toFixed(2);
+    const chPct=((last-prev)/prev*100).toFixed(2);
+
+    // Update header with latest price
+    document.getElementById('topPrice').textContent='$'+last.toFixed(2);
+    const tc=document.getElementById('topChange');
+    tc.textContent=`${parseFloat(ch)>=0?'+':''}${ch} (${chPct}%)`;
+    tc.className='tc '+(parseFloat(ch)>=0?'up':'dn');
+
+    // Dividend dates
+    const divDates=Object.values(divEvts).map(d=>{
+      const dd=new Date(d.date*1000);
+      return dd.toLocaleDateString('es-ES',{day:'2-digit',month:'short'});
+    });
+
+    const pm2=posiciones.length?pmed(px):px;
+    const alM=pm2*(1-P.alarmaPct);
+
+    if(pChart){pChart.destroy();pChart=null;}
+    pChart=new Chart(document.getElementById('priceChart'),{
+      type:'line',
+      data:{labels,datasets:[
+        {label:'JEPI',
+         data:prices,
+         borderColor:'#58a6ff',
+         borderWidth:2,
+         tension:.3,fill:true,
+         backgroundColor:'rgba(88,166,255,0.07)',
+         // Entry markers: big green dot on the price line at 1st of each entry month
+         pointRadius: (()=>{
+           // Use timestamps directly — find first ts >= start of entry month
+           const entryIndices=new Set();
+           posiciones.forEach(p=>{
+             const parts=p.mes.split(' ');
+             const monthNames={enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,
+               julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
+             const m=monthNames[parts[0].toLowerCase()];
+             const y=parseInt(parts[1]||'2026');
+             const entryTs=new Date(y,m,1).getTime()/1000; // unix ts of 1st of month
+             // Find first timestamp >= entryTs
+             let bestIdx=-1;
+             for(let i=0;i<ts.length;i++){
+               if(ts[i]>=entryTs){ bestIdx=i; break; }
+             }
+             // If not found (current month, data ends before month start) use last ts
+             if(bestIdx===-1 && ts.length>0) bestIdx=ts.length-1;
+             if(bestIdx>=0) entryIndices.add(bestIdx);
+           });
+           return labels.map((_,i)=>entryIndices.has(i)?8:0);
+         })(),
+         pointBackgroundColor: (()=>{
+           const entryIndices=new Set();
+           posiciones.forEach(p=>{
+             const parts=p.mes.split(' ');
+             const monthNames={enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,
+               julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
+             const m=monthNames[parts[0].toLowerCase()];
+             const y=parseInt(parts[1]||'2026');
+             const entryTs=new Date(y,m,1).getTime()/1000;
+             let bestIdx=-1;
+             for(let i=0;i<ts.length;i++){
+               if(ts[i]>=entryTs){ bestIdx=i; break; }
+             }
+             if(bestIdx===-1 && ts.length>0) bestIdx=ts.length-1;
+             if(bestIdx>=0) entryIndices.add(bestIdx);
+           });
+           return labels.map((_,i)=>entryIndices.has(i)?'#3fb950':'transparent');
+         })(),
+         pointBorderColor:'#0d1117',
+         pointBorderWidth:2,
+         pointHoverRadius:10,
+        },
+        {label:'Min.Hist',data:new Array(labels.length).fill(P.minHist),
+         borderColor:'#f85149',borderWidth:1.5,borderDash:[6,4],pointRadius:0,fill:false},
+        {label:'Entrada prom.',data:new Array(labels.length).fill(parseFloat(pm2.toFixed(2))),
+         borderColor:'#3fb950',borderWidth:1.5,borderDash:[4,4],pointRadius:0,fill:false},
+        {label:'Alarma',data:new Array(labels.length).fill(parseFloat(alM.toFixed(2))),
+         borderColor:'#e3b341',borderWidth:1,borderDash:[3,5],pointRadius:0,fill:false},
+      ]},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            backgroundColor:'#1c2333',borderColor:'#30363d',borderWidth:1,
+            titleColor:'#b0bac5',bodyColor:'#f0f6fc',
+            callbacks:{
+              label:ctx=>{
+                if(ctx.datasetIndex!==0)return null;
+                return ` $${ctx.parsed.y?.toFixed(2)??'—'}`;
+              },
+              afterBody:items=>{
+                const lbl=labels[items[0]?.dataIndex];
+                const lines=[];
+                if(divDates.includes(lbl)) lines.push('💰 Dividendo pagado');
+                const idx2=items[0]?.dataIndex||0;
+                posiciones.forEach(p=>{
+                  const parts=p.mes.split(' ');
+                  const mNames={enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,
+                    julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
+                  const m=mNames[parts[0].toLowerCase()];
+                  const y=parseInt(parts[1]||'2026');
+                  const eTs=new Date(y,m,1).getTime()/1000;
+                  let bi=-1;
+                  for(let i=0;i<ts.length;i++){ if(ts[i]>=eTs){bi=i;break;} }
+                  if(bi===-1&&ts.length>0) bi=ts.length-1;
+                  if(bi===idx2) lines.push(`🟢 Entrada ${p.mes}: $${p.precio.toFixed(2)} × x${p.apal}`);
+                });
+                return lines;
+              }
+            }
+          }
+        },
+        scales:{
+          x:{grid:{color:'rgba(255,255,255,0.04)'},
+             ticks:{color:'#8b949e',maxTicksLimit:8,maxRotation:0,font:{size:10}}},
+          y:{grid:{color:'rgba(255,255,255,0.04)'},
+             ticks:{color:'#8b949e',callback:v=>'$'+v.toFixed(0),font:{size:10}},
+             min:Math.max(0,mn*.97),max:mx*1.02}
+        }
+      }
+    });
+    st.textContent='✓ Yahoo · '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+    st.className='fst ok';
+  }catch(e){
+    console.error('Chart error:',e);
+    st.textContent='× Error cargando gráfico';
+    st.className='fst er';
+  }
+}
+
+// ── FMP API CONFIG ────────────────────────────────────────────────────────────
+const FMP_KEY = 'jLSP4MscQv3zeTSbM9gcDkK9l85MVZtQ';
+const FMP_BASE = 'https://financialmodelingprep.com/stable';
+
+// ── LIVE PRICE via FMP ────────────────────────────────────────────────────────
+async function fetchPrecioVivo() {
+  const btn  = document.getElementById('btnLive');
+  const icon = document.getElementById('btnLiveIcon');
+  const txte = document.getElementById('btnLiveTxt');
+  btn.disabled=true; icon.textContent='⏳'; txte.textContent='Buscando...';
+  btn.style.background='var(--amber)';
+
+  const yahooUrl='https://query1.finance.yahoo.com/v8/finance/chart/JEPI?range=1d&interval=1m';
+  const proxies=[
+    ()=>fetch(`https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,{signal:AbortSignal.timeout(7000)})
+        .then(r=>r.json()),
+    ()=>fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`,{signal:AbortSignal.timeout(7000)})
+        .then(r=>r.json()).then(w=>JSON.parse(w.contents)),
+    ()=>fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(yahooUrl)}`,{signal:AbortSignal.timeout(7000)})
+        .then(r=>r.json()),
+  ];
+
+  let lastErr=null;
+  for(const tryProxy of proxies){
+    try{
+      const data=await tryProxy();
+      const meta=data?.chart?.result?.[0]?.meta;
+      if(!meta) throw new Error('Sin meta');
+      const p=parseFloat(meta.regularMarketPrice||meta.previousClose);
+      const prev=parseFloat(meta.chartPreviousClose||meta.previousClose);
+      const ch=(p-prev).toFixed(2);
+      const chp=((p-prev)/prev*100).toFixed(2);
+      applyPrice(p,ch,chp,icon,txte,btn);
+      return;
+    }catch(e){ lastErr=e; continue; }
+  }
+  console.error('All proxies failed:',lastErr);
+  icon.textContent='✗'; txte.textContent='Error';
+  btn.classList.add('show-txt');
+  btn.style.background='var(--red)';
+  setTimeout(()=>{icon.textContent='⚡';txte.textContent='Actualizar precio';btn.style.background='';btn.disabled=false;btn.classList.remove('show-txt');},3000);
+}
+
+function applyPrice(p,ch,chp,icon,txte,btn){
+  document.getElementById('precioInput').value=p.toFixed(2);
+  recalcAll();
+  localStorage.setItem('jepi_lastprice_time',Date.now().toString());
+  icon.textContent='✓';
+  const sign=parseFloat(ch)>=0?'+':'';
+  txte.textContent=`$${p.toFixed(2)} ${sign}${chp}%`;
+  btn.classList.add('show-txt');
+  btn.style.background='var(--green2)';
+  const tc=document.getElementById('topChange');
+  tc.textContent=`${sign}${ch} (${sign}${chp}%)`;
+  tc.className='tc '+(parseFloat(ch)>=0?'up':'dn');
+  document.getElementById('topPrice').textContent='$'+p.toFixed(2);
+  setTimeout(()=>{icon.textContent='⚡';txte.textContent='Actualizar precio';btn.style.background='';btn.disabled=false;btn.classList.remove('show-txt');},5000);
+}
+
+// Auto-refresh price every 5 minutes if tab is visible
+setInterval(()=>{ if(!document.hidden) fetchPrecioVivo(); }, 5*60*1000);
+
+
+// ── PDF EXPORT ────────────────────────────────────────────────────────────────
+async function exportPDF() {
+  const overlay = document.getElementById('pdfOverlay');
+  const bar = document.getElementById('pdfProgressBar');
+  const msg = document.getElementById('pdfOverlayMsg');
+  const spin = document.getElementById('pdfSpinner');
+  const btnPdf = document.getElementById('btnPdf');
+  const pdfIcon = document.getElementById('pdfIcon');
+  const pdfTxt = document.getElementById('pdfTxt');
+
+  // Show overlay
+  overlay.classList.add('show');
+  btnPdf.classList.add('loading');
+  pdfIcon.textContent = '⏳'; pdfTxt.textContent = 'Generando...';
+
+  const setProgress = (pct, txt) => {
+    bar.style.width = pct + '%';
+    msg.textContent = txt;
+  };
+
+  try {
+    const px = parseFloat(document.getElementById('precioInput').value) || 57.54;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    // ── COLORS ──
+    const C = {
+      bg:     [13,17,23],
+      bg2:    [22,27,34],
+      bg3:    [28,35,51],
+      border: [48,54,61],
+      text:   [240,246,252],
+      text2:  [221,227,234],
+      text3:  [139,148,158],
+      green:  [63,185,80],
+      green2: [35,134,54],
+      red:    [248,81,73],
+      amber:  [227,179,65],
+      blue:   [88,166,255],
+      purple: [188,140,255],
+      white:  [255,255,255],
+    };
+
+    const W = 210, H = 297;
+    const ML = 12, MR = 12, PW = W - ML - MR;
+
+    // helpers
+    const rgb = c => ({ r: c[0], g: c[1], b: c[2] });
+    const setFill = c => doc.setFillColor(...c);
+    const setTxt  = c => doc.setTextColor(...c);
+    const setDraw = c => doc.setDrawColor(...c);
+    const rect    = (x,y,w,h,r=0) => { doc.roundedRect(x,y,w,h,r,r,'F'); };
+    const line    = (x1,y1,x2,y2) => { doc.line(x1,y1,x2,y2); };
+    const txt     = (t,x,y,opts={}) => doc.text(String(t),x,y,opts);
+    const bold    = () => doc.setFont('helvetica','bold');
+    const normal  = () => doc.setFont('helvetica','normal');
+    const fsize   = s => doc.setFontSize(s);
+
+    const zona = (p) => {
+      if(p>58)    return ['CARA x2',    C.red];
+      if(p>=54)   return ['NEUTRAL x5', C.amber];
+      if(p>=52)   return ['VALOR x6',   C.green];
+      if(p>=50)   return ['PROFUNDA x7',C.blue];
+      if(p>=49.52)return ['MIN.HIST x8',C.purple];
+      return             ['NUEVO x3',   C.amber];
+    };
+    const [zLbl, zCol] = zona(px);
+
+    setProgress(10, 'Calculando posiciones...');
+
+    // Calc aggregates
+    let tAcc=0,tExp=0,tPL=0,tDiv=0,tInv=0,dAcum=0;
+    const calcs = posiciones.map(p => {
+      const acc=Math.floor(p.aport*p.apal/p.precio);
+      const exp=acc*p.precio, liq=p.precio*(1-1/p.apal), al=p.precio*(1-P.alarmaPct);
+      const pl=(px-p.precio)*acc, plp=(px-p.precio)/p.precio, dm=acc*p.divAcc;
+      const distLiq=(px-liq)/px, distMin=(p.precio-P.minHist)/p.precio;
+      tAcc+=acc;tExp+=exp;tPL+=pl;tDiv+=dm;tInv+=p.aport;dAcum+=(p.divReal||0);
+      return {acc,exp,liq,al,pl,plp,dm,distLiq,distMin,enLiq:px<=liq,enAl:px<=al&&px>liq};
+    });
+    const col = posiciones.length*P.reservaMes + dAcum;
+    const pMed = posiciones.reduce((s,p,i)=>s+p.precio*calcs[i].acc,0)/tAcc;
+    const yld = (P.divRef*12/px*100).toFixed(2);
+    const divAnual = tAcc*P.divRef*12;
+    const fecha = new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'});
+    const hora  = new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+
+    setProgress(20, 'Diseñando encabezado...');
+
+    // ═══ PAGE BACKGROUND ═══
+    setFill(C.bg); rect(0,0,W,H); // full page dark
+
+    // ═══ HEADER BAND ═══
+    setFill(C.bg2); rect(0,0,W,28);
+    setFill(C.green); rect(0,0,W,2);   // top accent
+    setFill(C.border); rect(0,27,W,1);
+
+    bold(); fsize(18); setTxt(C.text);
+    txt('$JEPI TRACKER', ML, 11);
+    normal(); fsize(7); setTxt(C.text3);
+    txt('DCA APALANCADO', ML, 17);
+    txt(`Generado: ${fecha} · ${hora}`, ML, 22);
+
+    // Price pill top right
+    setFill(zCol); rect(W-MR-38, 6, 38, 8, 2);
+    bold(); fsize(7); setTxt(C.bg);
+    txt(`$${px.toFixed(2)}  ${zLbl}`, W-MR-36, 11.5);
+
+    setProgress(30, 'Dibujando métricas...');
+
+    // ═══ KPI ROW ═══
+    let yy = 32;
+    const kpis = [
+      ['CAPITAL INVERTIDO', `$${tInv.toFixed(0)}`, `${tAcc} acc · $${tExp.toFixed(0)} exp`, C.blue],
+      ['P&L PRECIO', (tPL>=0?'+':'')+`$${tPL.toFixed(2)}`, `${(tPL/tInv*100).toFixed(2)}% del capital`, tPL>=0?C.green:C.red],
+      ['DIVIDENDO MENSUAL', `$${tDiv.toFixed(2)}`, `$${(tDiv*12).toFixed(0)}/año · ${(tDiv/tInv*100).toFixed(2)}%/mes`, C.green],
+      ['COLCHÓN TOTAL', `$${col.toFixed(2)}`, col<P.linRoja?'⚠ bajo línea roja':'✓ saludable', C.amber],
+    ];
+    const kpiW = PW/4 - 1.5;
+    kpis.forEach(([lbl,val,sub,ac],i) => {
+      const kx = ML + i*(kpiW+2);
+      setFill(C.bg2); rect(kx, yy, kpiW, 22, 2);
+      setFill(ac); rect(kx, yy, kpiW, 2, 1);  // accent top
+      // label
+      normal(); fsize(6); setTxt(C.text3);
+      txt(lbl, kx+3, yy+7);
+      // value
+      bold(); fsize(12); setTxt(ac);
+      txt(val, kx+3, yy+15);
+      // sub
+      normal(); fsize(6); setTxt(C.text3);
+      txt(sub, kx+3, yy+20);
+    });
+    yy += 26;
+
+    // Secondary info bar
+    setFill(C.bg3); rect(ML, yy, PW, 8, 1);
+    normal(); fsize(7); setTxt(C.text2);
+    const secItems = [
+      `Yield: ${yld}%`, `Zona: ${zLbl}`, `Div. acumulado: $${dAcum.toFixed(2)}`,
+      `Precio medio entrada: $${pMed.toFixed(2)}`, `Posiciones: ${posiciones.length}`
+    ];
+    secItems.forEach((s,i) => txt(s, ML+4+i*(PW/5), yy+5.5));
+    yy += 12;
+
+    setProgress(45, 'Generando tabla de posiciones...');
+
+    // ═══ POSICIONES TABLE ═══
+    bold(); fsize(8); setTxt(C.text2);
+    setFill(C.border); rect(ML, yy, PW, 1);
+    txt('POSICIONES EJECUTADAS', ML, yy+4);
+    yy += 7;
+
+    const posHead = [['Mes','Precio','Apal.','Aport.','Acciones','Exposición','P&L $','P&L %','Div/mes','Liq.','Estado']];
+    const posBody = posiciones.map((p,i) => {
+      const c = calcs[i];
+      return [
+        p.mes.split(' ')[0],
+        `$${p.precio.toFixed(2)}`,
+        `x${p.apal}`,
+        `$${p.aport.toFixed(0)}`,
+        String(c.acc),
+        `$${c.exp.toFixed(0)}`,
+        (c.pl>=0?'+':'')+`$${c.pl.toFixed(2)}`,
+        (c.plp>=0?'+':'')+`${(c.plp*100).toFixed(1)}%`,
+        `$${c.dm.toFixed(2)}`,
+        `$${c.liq.toFixed(2)}`,
+        c.enLiq?'🚨 LIQ':c.enAl?'⚠ ALARM':'✓ OK'
+      ];
+    });
+
+    doc.autoTable({
+      head: posHead, body: posBody,
+      startY: yy, margin: { left: ML, right: MR },
+      styles: { fontSize: 7.5, cellPadding: 2.5, textColor: C.text2, fillColor: C.bg2, lineColor: C.border, lineWidth: 0.3 },
+      headStyles: { fillColor: C.bg3, textColor: C.text, fontStyle: 'bold', fontSize: 7 },
+      alternateRowStyles: { fillColor: C.bg3 },
+      columnStyles: {
+        0:{halign:'left'}, 6:{textColor: tPL>=0?C.green:C.red},
+        7:{textColor: tPL>=0?C.green:C.red}, 8:{textColor:C.green}, 9:{textColor:C.red}
+      },
+    });
+    yy = doc.lastAutoTable.finalY + 6;
+
+    setProgress(60, 'Generando sección de dividendos...');
+
+    // ═══ DIVIDENDOS ═══
+    bold(); fsize(8); setTxt(C.text2);
+    setFill(C.border); rect(ML, yy, PW, 1);
+    txt('DIVIDENDOS — ESTIMADOS VS REALES', ML, yy+4);
+    yy += 7;
+
+    let dAcumT=0;
+    const divBody = posiciones.map((p,i) => {
+      const c=calcs[i], dr=p.divReal||0; dAcumT+=dr;
+      const dif=dr-c.dm;
+      return [p.mes.split(' ')[0], String(c.acc), `$${p.divAcc.toFixed(4)}`,
+              `$${c.dm.toFixed(2)}`, `$${dr.toFixed(2)}`,
+              (dif>=0?'+':'')+`$${dif.toFixed(2)}`, `$${dAcumT.toFixed(2)}`];
+    });
+
+    doc.autoTable({
+      head:[['Mes','Acciones','Div/acc','Estimado','Real cobrado','Diferencia','Acumulado']],
+      body: divBody,
+      startY: yy, margin:{left:ML,right:MR},
+      styles:{fontSize:7.5,cellPadding:2.5,textColor:C.text2,fillColor:C.bg2,lineColor:C.border,lineWidth:.3},
+      headStyles:{fillColor:C.bg3,textColor:C.text,fontStyle:'bold',fontSize:7},
+      alternateRowStyles:{fillColor:C.bg3},
+      columnStyles:{3:{textColor:C.amber},4:{textColor:C.green},5:{textColor:C.green}},
+    });
+    yy = doc.lastAutoTable.finalY + 6;
+
+    setProgress(70, 'Generando alertas de liquidación...');
+
+    // ═══ ALERTAS ═══
+    bold(); fsize(8); setTxt(C.text2);
+    setFill(C.border); rect(ML, yy, PW, 1);
+    txt('ALERTAS Y NIVELES DE LIQUIDACIÓN', ML, yy+4);
+    yy += 7;
+
+    const anyLiq=calcs.some(c=>c.enLiq), anyAl=calcs.some(c=>c.enAl);
+    const alCol = anyLiq?C.red:anyAl?C.amber:C.green;
+    const alTxt = anyLiq?'LIQUIDACIÓN INMINENTE — Contacta a tu broker y aporta margen ahora.'
+      :anyAl?'ALARMA ACTIVA — Precio cruzó umbral -8%. Aporta $150-200 del colchón.'
+      :'Sin alertas activas — Todas las posiciones en zona segura.';
+    setFill([...alCol.map(v=>Math.min(255,v+180))].slice(0,3).map(v=>v*0.08+C.bg2[0]*0.92)); 
+    // simpler: just draw colored left border strip
+    setFill(C.bg2); rect(ML, yy, PW, 9, 2);
+    setFill(alCol); rect(ML, yy, 2, 9, 1);
+    bold(); fsize(7); setTxt(alCol);
+    txt(alTxt, ML+5, yy+5.5);
+    yy += 13;
+
+    const liqBody = posiciones.map((p,i) => {
+      const c=calcs[i];
+      return [p.mes, `$${p.precio.toFixed(2)}`, `x${p.apal}`,
+              `$${c.liq.toFixed(2)}`, `$${c.al.toFixed(2)}`,
+              `${(c.distLiq*100).toFixed(1)}%`,
+              `${(c.distMin*100).toFixed(1)}%`,
+              c.enLiq?'CRÍTICA':c.enAl?'ALARMA':'OK'];
+    });
+
+    doc.autoTable({
+      head:[['Posición','Entrada','Apal.','Liquidación','Alarma -8%','Dist.Liq.','Dist.Min.Hist.','Estado']],
+      body:liqBody,
+      startY:yy, margin:{left:ML,right:MR},
+      styles:{fontSize:7.5,cellPadding:2.5,textColor:C.text2,fillColor:C.bg2,lineColor:C.border,lineWidth:.3},
+      headStyles:{fillColor:C.bg3,textColor:C.text,fontStyle:'bold',fontSize:7},
+      alternateRowStyles:{fillColor:C.bg3},
+      columnStyles:{3:{textColor:C.red},4:{textColor:C.amber},5:{textColor:C.green}},
+    });
+    yy = doc.lastAutoTable.finalY + 6;
+
+    setProgress(80, 'Generando colchón y escenarios...');
+
+    // ═══ COLCHÓN PROGRESS BARS ═══
+    bold(); fsize(8); setTxt(C.text2);
+    setFill(C.border); rect(ML, yy, PW, 1);
+    txt('COLCHÓN DE SEGURIDAD', ML, yy+4);
+    yy += 7;
+
+    const progBars = [
+      ['Colchón vs meta $500', Math.min(col/500*100,100), col<P.linRoja?C.red:C.green, `$${col.toFixed(0)} / $500`],
+      ['Colchón vs línea roja ($300)', Math.min(col/300*100,100), col<P.linRoja?C.red:C.green, `$${col.toFixed(0)} / $300`],
+      ['Dividendos acumulados reales', Math.min(dAcum/500*100,100), C.green, `$${dAcum.toFixed(2)}`],
+      ['Posiciones completadas (de 25)', Math.min(posiciones.length/25*100,100), C.blue, `${posiciones.length}/25`],
+    ];
+
+    progBars.forEach(([lbl,pct,pc,val]) => {
+      normal(); fsize(7); setTxt(C.text2);
+      txt(lbl, ML, yy+3.5);
+      // track
+      setFill(C.bg3); rect(ML+70, yy, PW-70-20, 4, 1);
+      // fill
+      setFill(pc); rect(ML+70, yy, Math.max(1,(PW-70-20)*pct/100), 4, 1);
+      // value
+      bold(); fsize(7); setTxt(C.text);
+      txt(val, W-MR-18, yy+3.5, {align:'right'});
+      yy += 8;
+    });
+    yy += 4;
+
+    // ═══ ESCENARIOS ═══
+    bold(); fsize(8); setTxt(C.text2);
+    setFill(C.border); rect(ML, yy, PW, 1);
+    txt('ESCENARIOS DE PRECIO', ML, yy+4);
+    yy += 7;
+
+    const scens = [
+      ['🟠 Nuevo',44],['🟣 Mín.Hist',49.52],['🔵 Profunda',51],
+      ['🟢 Valor',53],['⚪ Actual',parseFloat(px.toFixed(2))],
+      ['🟡 Neutral',57],['🔴 Cara',59],['📈 Recup.',62],['📈 Optim.',68],['📈 Ambic.',75]
+    ];
+    const scenBody = scens.map(([lbl,sp]) => {
+      const pl=(sp-pMed)*tAcc, y2=(P.divRef*12/sp*100).toFixed(2);
+      const ret=pl+dAcum, r=(ret/tInv*100).toFixed(1);
+      return [lbl, `$${sp.toFixed(2)}`,
+        (pl>=0?'+':'')+`$${pl.toFixed(0)}`, `${y2}%`,
+        `$${divAnual.toFixed(0)}`,
+        (ret>=0?'+':'')+`$${ret.toFixed(0)}`,
+        (parseFloat(r)>=0?'+':'')+`${r}%`];
+    });
+
+    doc.autoTable({
+      head:[['Escenario','Precio','P&L $','Yield','Div.Anual','Retorno Total','Rentab.%']],
+      body:scenBody,
+      startY:yy, margin:{left:ML,right:MR},
+      styles:{fontSize:7.5,cellPadding:2.5,textColor:C.text2,fillColor:C.bg2,lineColor:C.border,lineWidth:.3},
+      headStyles:{fillColor:C.bg3,textColor:C.text,fontStyle:'bold',fontSize:7},
+      alternateRowStyles:{fillColor:C.bg3},
+      didParseCell: (data) => {
+        if(data.section==='body'){
+          const sp = scens[data.row.index]?.[1];
+          if(Math.abs(sp-px)<0.01){ data.cell.styles.fillColor=C.bg3; data.cell.styles.fontStyle='bold'; }
+          if(data.column.index===2||data.column.index===5||data.column.index===6){
+            const v=parseFloat(data.cell.raw.replace(/[^0-9.-]/g,''));
+            data.cell.styles.textColor = v>=0?C.green:C.red;
+          }
+        }
+      }
+    });
+    yy = doc.lastAutoTable.finalY + 4;
+
+    setProgress(90, 'Añadiendo pie de página...');
+
+    // ═══ FOOTER ═══
+    setFill(C.border); rect(ML, yy, PW, 0.5);
+    normal(); fsize(6.5); setTxt(C.text3);
+    txt(`$JEPI Tracker — Reporte generado: ${fecha} · ${hora}`, ML, yy+4);
+    txt('Documento confidencial · Solo para uso personal · Los datos no constituyen asesoramiento financiero', W-MR, yy+4, {align:'right'});
+
+    setProgress(98, 'Guardando PDF...');
+    await new Promise(r => setTimeout(r, 300));
+
+    // ── DOWNLOAD ──
+    const filename = `JEPI_Reporte_${new Date().toISOString().slice(0,10)}.pdf`;
+    doc.save(filename);
+
+    setProgress(100, '✓ PDF descargado correctamente');
+    spin.textContent = '✅';
+    document.getElementById('pdfOverlayTitle').textContent = 'Reporte generado';
+
+    await new Promise(r => setTimeout(r, 2000));
+
+  } catch(e) {
+    console.error(e);
+    document.getElementById('pdfSpinner').textContent = '❌';
+    document.getElementById('pdfOverlayTitle').textContent = 'Error al generar PDF';
+    document.getElementById('pdfOverlayMsg').textContent = e.message || 'Algo salió mal. Intenta de nuevo.';
+    await new Promise(r => setTimeout(r, 3000));
+  } finally {
+    overlay.classList.remove('show');
+    overlay.style.display = 'none';
+    const btnPdf = document.getElementById('btnPdf');
+    btnPdf.classList.remove('loading');
+    document.getElementById('pdfIcon').textContent = '📄';
+    document.getElementById('pdfTxt').textContent = 'PDF';
+    // Reset overlay for next use
+    setTimeout(() => {
+      document.getElementById('pdfProgressBar').style.width = '0%';
+      document.getElementById('pdfSpinner').textContent = '📄';
+      document.getElementById('pdfOverlayTitle').textContent = 'Generando reporte PDF';
+      document.getElementById('pdfOverlayMsg').textContent = 'Claude está analizando tu portafolio...';
+    }, 500);
+  }
+}
+
+// ── STORAGE ───────────────────────────────────────────────────────────────
+const STORE_KEY='jepi_tracker_v1';
+
+function saveData(){
+  try{
+    const payload={posiciones,precio:parseFloat(document.getElementById('precioInput').value)||57.54,savedAt:new Date().toISOString()};
+    localStorage.setItem(STORE_KEY,JSON.stringify(payload));
+    localStorage.setItem('jepi_lastprice_time', Date.now().toString());
+    setSaveUI('saved');
+  }catch(e){setSaveUI('error');}
+}
+
+function loadData(){
+  try{
+    const raw=localStorage.getItem(STORE_KEY);
+    if(!raw)return false;
+    const payload=JSON.parse(raw);
+    if(payload.posiciones&&Array.isArray(payload.posiciones))posiciones=payload.posiciones;
+    if(payload.precio)document.getElementById('precioInput').value=payload.precio;
+    if(payload.savedAt){
+      const d=new Date(payload.savedAt);
+      const lbl=d.toLocaleDateString('es-ES',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+      setSaveUI('loaded',lbl);
+    }
+    return true;
+  }catch(e){return false;}
+}
+
+function clearData(){
+  if(!confirm('¿Borrar todos los datos guardados? No se puede deshacer.'))return;
+  localStorage.removeItem(STORE_KEY);
+  posiciones=[
+    {mes:'Abril 2026',precio:55.84,apal:5,aport:402.048,divAcc:0.4205,divReal:15.14},
+    {mes:'Mayo 2026', precio:57.47,apal:5,aport:827.568,divAcc:0.4476,divReal:48.34}
+  ];
+  document.getElementById('precioInput').value='57.54';
+  recalcAll();setSaveUI('cleared');
+}
+
+function setSaveUI(state,extra){
+  const ic=document.getElementById('saveIcon'),lb=document.getElementById('saveLbl');
+  if(state==='saved')  {ic.textContent='✓';lb.textContent='Guardado';lb.style.color='var(--green)';ic.style.color='var(--green)';}
+  if(state==='loaded') {ic.textContent='📂';lb.textContent='Cargado '+extra;lb.style.color='var(--blue)';ic.style.color='var(--blue)';}
+  if(state==='error')  {ic.textContent='✗';lb.textContent='Error';lb.style.color='var(--red)';ic.style.color='var(--red)';}
+  if(state==='cleared'){ic.textContent='🗑️';lb.textContent='Borrado';lb.style.color='var(--text3)';ic.style.color='var(--text3)';}
+  if(state==='saved'||state==='cleared'){
+    setTimeout(()=>{ic.textContent='💾';lb.textContent=posiciones.length+' pos.';lb.style.color='var(--text3)';ic.style.color='var(--text3)';},3000);
+  }
+}
+
+// Auto-save debounced after each recalc
+let _saveTimer=null;
+const _recalcOrig=recalcAll;
+// Patch addPos to save after adding
+const _addOrig=addPos;
+function addPos(){_addOrig();saveData();}
+// Patch delPos to save after deleting
+const _delOrig=delPos;
+function delPos(i){
+  if(!confirm('¿Eliminar '+posiciones[i].mes+'?'))return;
+  posiciones.splice(i,1);recalcAll();saveData();
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────
+const _wasLoaded=loadData();
+recalcAll();
+loadRange('3mo',null);
+// Auto-fetch live price on startup
+fetchPrecioVivo();
+if(!_wasLoaded)setSaveUI('saved');
+
+// Save on price change too
+document.getElementById('precioInput').addEventListener('change',()=>{clearTimeout(_saveTimer);_saveTimer=setTimeout(saveData,600);});
+
+// Inject data management card into colchon tab
+window.addEventListener('load',()=>{
+  const colTab=document.getElementById('tab-col');
+  const card=document.createElement('div');
+  card.className='card';card.style.marginTop='10px';
+  card.innerHTML=`
+    <div class="ch"><span class="ct">Datos guardados</span></div>
+    <div class="fbody" style="display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:11px;color:var(--text2);line-height:1.8;">
+        💾 Tus posiciones se guardan automáticamente en este navegador.<br>
+        📱 Instalada como app, los datos persisten entre sesiones.<br>
+        ⚠️ Borrar caché del navegador elimina los datos guardados.
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="saveData()" style="flex:1;padding:10px;background:var(--green2);border:none;border-radius:4px;color:#fff;font-family:var(--mono);font-size:12px;cursor:pointer;font-weight:500;">💾 Guardar ahora</button>
+        <button onclick="clearData()" style="flex:1;padding:10px;background:none;border:1px solid var(--red);border-radius:4px;color:var(--red);font-family:var(--mono);font-size:12px;cursor:pointer;">🗑️ Borrar datos</button>
+      </div>
+      <div style="font-size:10px;color:var(--text3);padding:8px;background:var(--bg3);border-radius:4px;" id="storeInfo">Calculando...</div>
+    </div>`;
+  colTab.appendChild(card);
+  try{
+    const raw=localStorage.getItem(STORE_KEY);
+    const el=document.getElementById('storeInfo');
+    if(raw){
+      const pl=JSON.parse(raw),d=new Date(pl.savedAt),kb=(raw.length/1024).toFixed(1);
+      el.textContent=`Último guardado: ${d.toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'short'})} ${d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})} · ${kb} KB · ${pl.posiciones?.length||0} posición(es)`;
+    }else{el.textContent='Sin datos guardados aún. Se guardarán automáticamente.';}
+  }catch(e){}
+});
+</script>
+</body>
+</html>
