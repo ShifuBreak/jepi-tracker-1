@@ -1,0 +1,18 @@
+{
+  "name": "$JEPI Tracker",
+  "short_name": "$JEPI",
+  "description": "DCA Apalancado — Control de inversiones JEPI",
+  "start_url": "/jepi-tracker/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

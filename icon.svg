@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="100" fill="#0d1117"/>
+  <rect width="512" height="8" rx="0" fill="#3fb950" y="0"/>
+  <text x="256" y="220" font-family="Arial Black, Arial" font-weight="900" 
+    font-size="140" fill="#3fb950" text-anchor="middle" dominant-baseline="middle">$</text>
+  <text x="256" y="370" font-family="Arial Black, Arial" font-weight="900" 
+    font-size="110" fill="#f0f6fc" text-anchor="middle" dominant-baseline="middle">JEPI</text>
+  <rect x="60" y="420" width="392" height="6" rx="3" fill="#3fb950" opacity="0.5"/>
+</svg>
