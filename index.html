@@ -690,46 +690,41 @@ async function loadRange(range,btn){
          backgroundColor:'rgba(88,166,255,0.07)',
          // Entry markers: big green dot on the price line at 1st of each entry month
          pointRadius: (()=>{
-           const mesMap={enero:'ene',febrero:'feb',marzo:'mar',abril:'abr',mayo:'may',
-             junio:'jun',julio:'jul',agosto:'ago',septiembre:'sep',octubre:'oct',
-             noviembre:'nov',diciembre:'dic'};
-           // Pre-compute best label index for each position
+           // Use timestamps directly — find first ts >= start of entry month
            const entryIndices=new Set();
            posiciones.forEach(p=>{
              const parts=p.mes.split(' ');
-             const mc=mesMap[parts[0].toLowerCase()]||parts[0].slice(0,3).toLowerCase();
-             const yr=parts[1]||'';
-             const yr2=yr.slice(2); // '26'
-             // Find all labels that contain this month abbrev in correct year region
-             const candidates=labels.map((l,i)=>({l,i})).filter(({l,i})=>{
-               const inYearRegion=labels.slice(Math.max(0,i-20),i+20).some(ll=>ll.includes(yr2));
-               return l.toLowerCase().includes(mc)&&inYearRegion;
-             });
-             if(candidates.length>0){
-               // Prefer "01 xxx" label, else use first of month region
-               const firstDay=candidates.find(c=>c.l.startsWith('01'));
-               entryIndices.add(firstDay?firstDay.i:candidates[0].i);
+             const monthNames={enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,
+               julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
+             const m=monthNames[parts[0].toLowerCase()];
+             const y=parseInt(parts[1]||'2026');
+             const entryTs=new Date(y,m,1).getTime()/1000; // unix ts of 1st of month
+             // Find first timestamp >= entryTs
+             let bestIdx=-1;
+             for(let i=0;i<ts.length;i++){
+               if(ts[i]>=entryTs){ bestIdx=i; break; }
              }
+             // If not found (current month, data ends before month start) use last ts
+             if(bestIdx===-1 && ts.length>0) bestIdx=ts.length-1;
+             if(bestIdx>=0) entryIndices.add(bestIdx);
            });
            return labels.map((_,i)=>entryIndices.has(i)?8:0);
          })(),
          pointBackgroundColor: (()=>{
-           const mesMap={enero:'ene',febrero:'feb',marzo:'mar',abril:'abr',mayo:'may',
-             junio:'jun',julio:'jul',agosto:'ago',septiembre:'sep',octubre:'oct',
-             noviembre:'nov',diciembre:'dic'};
            const entryIndices=new Set();
            posiciones.forEach(p=>{
              const parts=p.mes.split(' ');
-             const mc=mesMap[parts[0].toLowerCase()]||parts[0].slice(0,3).toLowerCase();
-             const yr2=(parts[1]||'').slice(2);
-             const candidates=labels.map((l,i)=>({l,i})).filter(({l,i})=>{
-               const inYearRegion=labels.slice(Math.max(0,i-20),i+20).some(ll=>ll.includes(yr2));
-               return l.toLowerCase().includes(mc)&&inYearRegion;
-             });
-             if(candidates.length>0){
-               const firstDay=candidates.find(c=>c.l.startsWith('01'));
-               entryIndices.add(firstDay?firstDay.i:candidates[0].i);
+             const monthNames={enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,
+               julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
+             const m=monthNames[parts[0].toLowerCase()];
+             const y=parseInt(parts[1]||'2026');
+             const entryTs=new Date(y,m,1).getTime()/1000;
+             let bestIdx=-1;
+             for(let i=0;i<ts.length;i++){
+               if(ts[i]>=entryTs){ bestIdx=i; break; }
              }
+             if(bestIdx===-1 && ts.length>0) bestIdx=ts.length-1;
+             if(bestIdx>=0) entryIndices.add(bestIdx);
            });
            return labels.map((_,i)=>entryIndices.has(i)?'#3fb950':'transparent');
          })(),
@@ -761,18 +756,18 @@ async function loadRange(range,btn){
                 const lbl=labels[items[0]?.dataIndex];
                 const lines=[];
                 if(divDates.includes(lbl)) lines.push('💰 Dividendo pagado');
-                const mesMap2={enero:'ene',febrero:'feb',marzo:'mar',abril:'abr',mayo:'may',
-                  junio:'jun',julio:'jul',agosto:'ago',septiembre:'sep',octubre:'oct',
-                  noviembre:'nov',diciembre:'dic'};
                 const idx2=items[0]?.dataIndex||0;
                 posiciones.forEach(p=>{
                   const parts=p.mes.split(' ');
-                  const mc=mesMap2[parts[0].toLowerCase()]||parts[0].slice(0,3).toLowerCase();
-                  const yr2=(parts[1]||'').slice(2);
-                  const inMonth=lbl.toLowerCase().includes(mc);
-                  const inYear=labels.slice(Math.max(0,idx2-20),idx2+20).some(l=>l.includes(yr2));
-                  if(inMonth&&inYear)
-                    lines.push(`🟢 Entrada ${p.mes}: $${p.precio.toFixed(2)} × x${p.apal}`);
+                  const mNames={enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,
+                    julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
+                  const m=mNames[parts[0].toLowerCase()];
+                  const y=parseInt(parts[1]||'2026');
+                  const eTs=new Date(y,m,1).getTime()/1000;
+                  let bi=-1;
+                  for(let i=0;i<ts.length;i++){ if(ts[i]>=eTs){bi=i;break;} }
+                  if(bi===-1&&ts.length>0) bi=ts.length-1;
+                  if(bi===idx2) lines.push(`🟢 Entrada ${p.mes}: $${p.precio.toFixed(2)} × x${p.apal}`);
                 });
                 return lines;
               }
@@ -808,26 +803,35 @@ async function fetchPrecioVivo() {
   const txte = document.getElementById('btnLiveTxt');
   btn.disabled=true; icon.textContent='⏳'; txte.textContent='Buscando...';
   btn.style.background='var(--amber)';
-  try {
-    // Direct Yahoo via allorigins proxy — works from GitHub Pages without CORS issues
-    const yahooUrl='https://query1.finance.yahoo.com/v8/finance/chart/JEPI?range=1d&interval=1m';
-    const res=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`);
-    if(!res.ok) throw new Error('Proxy no disponible');
-    const wrapper=await res.json();
-    const data=JSON.parse(wrapper.contents);
-    const meta=data?.chart?.result?.[0]?.meta;
-    if(!meta) throw new Error('Sin datos de precio');
-    const p=parseFloat(meta.regularMarketPrice||meta.previousClose);
-    const prev=parseFloat(meta.chartPreviousClose||meta.previousClose);
-    const ch=(p-prev).toFixed(2);
-    const chp=((p-prev)/prev*100).toFixed(2);
-    applyPrice(p,ch,chp,icon,txte,btn);
-  } catch(e) {
-    console.error('Price error:',e);
-    icon.textContent='✗'; txte.textContent='Error — reintenta';
-    btn.style.background='var(--red)';
-    setTimeout(()=>{icon.textContent='⚡';txte.textContent='Actualizar precio';btn.style.background='';btn.disabled=false;},3000);
+
+  const yahooUrl='https://query1.finance.yahoo.com/v8/finance/chart/JEPI?range=1d&interval=1m';
+  const proxies=[
+    ()=>fetch(`https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,{signal:AbortSignal.timeout(7000)})
+        .then(r=>r.json()),
+    ()=>fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`,{signal:AbortSignal.timeout(7000)})
+        .then(r=>r.json()).then(w=>JSON.parse(w.contents)),
+    ()=>fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(yahooUrl)}`,{signal:AbortSignal.timeout(7000)})
+        .then(r=>r.json()),
+  ];
+
+  let lastErr=null;
+  for(const tryProxy of proxies){
+    try{
+      const data=await tryProxy();
+      const meta=data?.chart?.result?.[0]?.meta;
+      if(!meta) throw new Error('Sin meta');
+      const p=parseFloat(meta.regularMarketPrice||meta.previousClose);
+      const prev=parseFloat(meta.chartPreviousClose||meta.previousClose);
+      const ch=(p-prev).toFixed(2);
+      const chp=((p-prev)/prev*100).toFixed(2);
+      applyPrice(p,ch,chp,icon,txte,btn);
+      return;
+    }catch(e){ lastErr=e; continue; }
   }
+  console.error('All proxies failed:',lastErr);
+  icon.textContent='✗'; txte.textContent='Error — reintenta';
+  btn.style.background='var(--red)';
+  setTimeout(()=>{icon.textContent='⚡';txte.textContent='Actualizar precio';btn.style.background='';btn.disabled=false;},3000);
 }
 
 function applyPrice(p,ch,chp,icon,txte,btn){
