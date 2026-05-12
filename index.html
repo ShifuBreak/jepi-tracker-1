@@ -623,13 +623,25 @@ async function loadRange(range,btn){
     const rangeMap={'1mo':'1mo','3mo':'3mo','6mo':'6mo','1y':'1y','2y':'2y'};
     const r=range||'3mo';
 
-    // Use allorigins CORS proxy to fetch Yahoo Finance — free, no key needed
+    // Try multiple CORS proxies for resilience
     const yahooUrl=`https://query1.finance.yahoo.com/v8/finance/chart/JEPI?range=${r}&interval=1d&events=div`;
-    const proxyUrl=`https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`;
-
-    const res=await fetch(proxyUrl);
-    const wrapper=await res.json();
-    const data=JSON.parse(wrapper.contents);
+    const proxies=[
+      `https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`,
+      `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,
+    ];
+    let data=null;
+    for(const proxyUrl of proxies){
+      try{
+        const res=await fetch(proxyUrl,{signal:AbortSignal.timeout(8000)});
+        if(!res.ok) continue;
+        const raw=await res.text();
+        // allorigins wraps in {contents:...}, corsproxy returns direct JSON
+        const parsed=JSON.parse(raw);
+        data=parsed.contents?JSON.parse(parsed.contents):parsed;
+        if(data?.chart?.result?.[0]) break;
+      }catch(e){ continue; }
+    }
+    if(!data) throw new Error('No se pudo conectar con ningún proxy');
 
     const result=data?.chart?.result?.[0];
     if(!result) throw new Error('Sin datos');
@@ -677,33 +689,50 @@ async function loadRange(range,btn){
          tension:.3,fill:true,
          backgroundColor:'rgba(88,166,255,0.07)',
          // Entry markers: big green dot on the price line at 1st of each entry month
-         pointRadius: labels.map((lbl,i)=>{
+         pointRadius: (()=>{
            const mesMap={enero:'ene',febrero:'feb',marzo:'mar',abril:'abr',mayo:'may',
              junio:'jun',julio:'jul',agosto:'ago',septiembre:'sep',octubre:'oct',
              noviembre:'nov',diciembre:'dic'};
-           return posiciones.some(p=>{
-             const parts=p.mes.split(' '); // ['Abril','2026']
-             const mc=mesMap[parts[0].toLowerCase()]||parts[0].slice(0,3).toLowerCase();
-             const yr=parts[1]||'';
-             // Label format: "01 abr" — must match month AND year must appear in surrounding labels
-             // We check: label starts with 01, contains month abbrev,
-             // and the year of the position matches the year visible in that chart region
-             return lbl.toLowerCase().startsWith('01')&&lbl.toLowerCase().includes(mc)
-               &&labels.slice(Math.max(0,i-15),i+15).some(l=>l.includes(yr.slice(2)));
-           })?8:0;
-         }),
-         pointBackgroundColor: labels.map((lbl,i)=>{
-           const mesMap={enero:'ene',febrero:'feb',marzo:'mar',abril:'abr',mayo:'may',
-             junio:'jun',julio:'jul',agosto:'ago',septiembre:'sep',octubre:'oct',
-             noviembre:'nov',diciembre:'dic'};
-           return posiciones.some(p=>{
+           // Pre-compute best label index for each position
+           const entryIndices=new Set();
+           posiciones.forEach(p=>{
              const parts=p.mes.split(' ');
              const mc=mesMap[parts[0].toLowerCase()]||parts[0].slice(0,3).toLowerCase();
              const yr=parts[1]||'';
-             return lbl.toLowerCase().startsWith('01')&&lbl.toLowerCase().includes(mc)
-               &&labels.slice(Math.max(0,i-15),i+15).some(l=>l.includes(yr.slice(2)));
-           })?'#3fb950':'transparent';
-         }),
+             const yr2=yr.slice(2); // '26'
+             // Find all labels that contain this month abbrev in correct year region
+             const candidates=labels.map((l,i)=>({l,i})).filter(({l,i})=>{
+               const inYearRegion=labels.slice(Math.max(0,i-20),i+20).some(ll=>ll.includes(yr2));
+               return l.toLowerCase().includes(mc)&&inYearRegion;
+             });
+             if(candidates.length>0){
+               // Prefer "01 xxx" label, else use first of month region
+               const firstDay=candidates.find(c=>c.l.startsWith('01'));
+               entryIndices.add(firstDay?firstDay.i:candidates[0].i);
+             }
+           });
+           return labels.map((_,i)=>entryIndices.has(i)?8:0);
+         })(),
+         pointBackgroundColor: (()=>{
+           const mesMap={enero:'ene',febrero:'feb',marzo:'mar',abril:'abr',mayo:'may',
+             junio:'jun',julio:'jul',agosto:'ago',septiembre:'sep',octubre:'oct',
+             noviembre:'nov',diciembre:'dic'};
+           const entryIndices=new Set();
+           posiciones.forEach(p=>{
+             const parts=p.mes.split(' ');
+             const mc=mesMap[parts[0].toLowerCase()]||parts[0].slice(0,3).toLowerCase();
+             const yr2=(parts[1]||'').slice(2);
+             const candidates=labels.map((l,i)=>({l,i})).filter(({l,i})=>{
+               const inYearRegion=labels.slice(Math.max(0,i-20),i+20).some(ll=>ll.includes(yr2));
+               return l.toLowerCase().includes(mc)&&inYearRegion;
+             });
+             if(candidates.length>0){
+               const firstDay=candidates.find(c=>c.l.startsWith('01'));
+               entryIndices.add(firstDay?firstDay.i:candidates[0].i);
+             }
+           });
+           return labels.map((_,i)=>entryIndices.has(i)?'#3fb950':'transparent');
+         })(),
          pointBorderColor:'#0d1117',
          pointBorderWidth:2,
          pointHoverRadius:10,
@@ -732,16 +761,17 @@ async function loadRange(range,btn){
                 const lbl=labels[items[0]?.dataIndex];
                 const lines=[];
                 if(divDates.includes(lbl)) lines.push('💰 Dividendo pagado');
-                const mesMap={enero:'ene',febrero:'feb',marzo:'mar',abril:'abr',mayo:'may',
+                const mesMap2={enero:'ene',febrero:'feb',marzo:'mar',abril:'abr',mayo:'may',
                   junio:'jun',julio:'jul',agosto:'ago',septiembre:'sep',octubre:'oct',
                   noviembre:'nov',diciembre:'dic'};
                 const idx2=items[0]?.dataIndex||0;
                 posiciones.forEach(p=>{
                   const parts=p.mes.split(' ');
-                  const mc=mesMap[parts[0].toLowerCase()]||parts[0].slice(0,3).toLowerCase();
-                  const yr=parts[1]||'';
-                  if(lbl.toLowerCase().startsWith('01')&&lbl.toLowerCase().includes(mc)
-                    &&labels.slice(Math.max(0,idx2-15),idx2+15).some(l=>l.includes(yr.slice(2))))
+                  const mc=mesMap2[parts[0].toLowerCase()]||parts[0].slice(0,3).toLowerCase();
+                  const yr2=(parts[1]||'').slice(2);
+                  const inMonth=lbl.toLowerCase().includes(mc);
+                  const inYear=labels.slice(Math.max(0,idx2-20),idx2+20).some(l=>l.includes(yr2));
+                  if(inMonth&&inYear)
                     lines.push(`🟢 Entrada ${p.mes}: $${p.precio.toFixed(2)} × x${p.apal}`);
                 });
                 return lines;
