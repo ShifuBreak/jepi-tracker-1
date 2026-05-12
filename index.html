@@ -198,6 +198,133 @@ td.b{color:var(--blue);}
 .pfill{height:100%;border-radius:2px;}
 .pval{font-size:10px;color:var(--text2);width:70px;text-align:right;flex-shrink:0;}
 
+/* ── FETCH STATUS ── */
+.fst{font-size:10px;}
+.fst.ld{color:var(--amber);}
+.fst.ok{color:var(--green);}
+.fst.er{color:var(--red);}
+
+/* ── RULES ── */
+.rules{padding:10px 14px;display:flex;flex-direction:column;gap:6px;}
+.rule{background:var(--bg3);border-radius:4px;padding:8px 10px;font-size:11px;color:var(--text);border-left:3px solid var(--border);line-height:1.5;}
+.rule.g{border-color:var(--green);}
+.rule.a{border-color:var(--amber);}
+.rule.r{border-color:var(--red);}
+
+/* ══════════════════════════════════════
+   MOBILE — ultra-compact header
+   ══════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Collapse topbar + pbar + astrip into one slim bar */
+  .topbar{
+    padding:6px 10px;
+    gap:6px;
+  }
+  .tl{font-size:13px;}
+  .ttag{display:none;} /* hide DCA APAL tag */
+  .tp{font-size:16px;}
+  .tc{font-size:10px;padding:2px 6px;}
+  /* Save status — hide label, keep icon */
+  #saveLbl{display:none;}
+
+  /* Collapse pbar: price input + zone + button on 1 line, no label */
+  .pbar{padding:5px 10px;gap:6px;}
+  .pbar label{display:none;}
+  .pbar input{width:76px;font-size:14px;padding:4px 6px;}
+  .ztag{font-size:9px;padding:2px 7px;}
+  .btn-yahoo{padding:5px 10px;font-size:10px;}
+
+  /* yinfo bar — 1 line, smaller */
+  .yinfo-bar{padding:4px 10px;font-size:9px;gap:6px;flex-wrap:nowrap;overflow:hidden;}
+
+  /* Alert strip — compact */
+  .astrip{padding:5px 10px;font-size:10px;}
+
+  /* Sections — less padding */
+  .section{padding:8px 8px 70px;}
+
+  /* KPI values smaller on mobile */
+  .kv{font-size:16px;}
+  #k-div .kv{font-size:20px;}
+
+  /* Nav — tighter */
+  .nb{font-size:8px;gap:2px;padding:3px 1px;}
+  .nb .ni{font-size:15px;}
+}
+
+/* ══════════════════════════════════════
+   DESKTOP — 2-column layout
+   ══════════════════════════════════════ */
+@media (min-width: 769px) {
+  html,body{overflow:auto;}
+  .app{height:auto;min-height:100vh;}
+  .content{overflow:visible;flex:none;}
+
+  /* Wider topbar */
+  .topbar{padding:12px 24px;}
+  .tp{font-size:22px;}
+  .tl{font-size:18px;}
+
+  /* Price bar horizontal, bigger */
+  .pbar{padding:10px 24px;gap:14px;}
+  .pbar input{width:100px;font-size:16px;}
+  .btn-yahoo{padding:8px 16px;font-size:12px;}
+  .yinfo-bar{padding:6px 24px;font-size:11px;}
+  .astrip{padding:8px 24px;font-size:12px;}
+
+  /* Nav becomes a sidebar on desktop */
+  .nav{
+    position:fixed;left:0;top:0;bottom:0;
+    width:72px;height:auto;
+    flex-direction:column;
+    border-top:none;border-right:1px solid var(--border);
+    padding:100px 0 20px;
+    z-index:20;
+  }
+  .nb{flex:none;padding:14px 4px;font-size:8px;border-left:3px solid transparent;}
+  .nb.active{border-left-color:var(--green);background:rgba(63,185,80,.06);}
+
+  /* Offset content for sidebar */
+  .app{flex-direction:row;}
+  .main-col{flex:1;display:flex;flex-direction:column;margin-left:72px;}
+  .content{flex:1;}
+  .section{padding:20px 24px 40px;}
+
+  /* 2-column grid for dashboard KPIs */
+  .kg{grid-template-columns:1fr 1fr 1fr 1fr;}
+  .kg3{grid-template-columns:1fr 1fr 1fr 1fr 1fr;}
+
+  /* Desktop: dashboard 2-col layout */
+  .dash-2col{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+  .dash-2col .card{margin-bottom:0;}
+
+  /* Bigger chart on desktop */
+  .cwrap canvas{height:280px!important;}
+
+  /* KPI values larger */
+  .kv{font-size:20px;}
+  #k-div .kv{font-size:26px;}
+
+  /* Tables — more comfortable padding */
+  th{padding:10px 14px;font-size:10px;}
+  td{padding:10px 14px;font-size:13px;}
+
+  /* PDF overlay centered */
+  #pdfOverlay>div{max-width:400px;}
+
+  /* Nav label visible */
+  .nb{font-size:9px;}
+}
+
+@media (min-width:1100px){
+  .section{padding:24px 36px 40px;}
+  .kg{grid-template-columns:repeat(4,1fr);}
+}
+
 /* FETCH */
 .fst{font-size:10px;color:var(--text2);}
 .fst.ld{color:var(--amber);}
@@ -225,6 +352,7 @@ strong{color:var(--text);font-weight:600;}
 
   <div class="topbar">
     <div class="tl"><span>$JEPI</span> Tracker</div>
+    <div id="alertDot" style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;display:none;" title="Estado de alertas"></div>
     <div class="ttag">DCA APAL.</div>
     <div style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text3);" id="saveStatus">
       <span id="saveIcon">💾</span><span id="saveLbl">—</span>
@@ -247,8 +375,9 @@ strong{color:var(--text);font-weight:600;}
       <span id="btnLiveIcon">⚡</span> <span id="btnLiveTxt">Actualizar precio</span>
     </button>
   </div>
-  <div class="yinfo-bar" id="yinfoBar">—</div>
+  <div class="yinfo-bar" id="yinfoBar" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">—</div>
 
+  <div class="main-col">
   <div class="content" id="ca">
 
     <!-- DASHBOARD -->
@@ -269,6 +398,7 @@ strong{color:var(--text);font-weight:600;}
         <div class="kpi" id="k-divac"></div>
         <div class="kpi" id="k-alert"></div>
       </div>
+      <div class="dash-2col">
       <div class="card">
         <div class="ch">
           <span class="ct">Precio $JEPI</span>
@@ -411,6 +541,7 @@ strong{color:var(--text);font-weight:600;}
     <button class="nb" onclick="showTab('col',this)"><span class="ni">🛡️</span>Colchón</button>
     <button class="nb nb-pdf" id="btnPdf" onclick="exportPDF()"><span class="ni" id="pdfIcon">📄</span><span id="pdfTxt">PDF</span></button>
   </nav>
+  </div><!-- /main-col -->
 
   <!-- PDF OVERLAY -->
   <div id="pdfOverlay" style="display:none;position:fixed;inset:0;background:rgba(13,17,23,.92);z-index:999;
